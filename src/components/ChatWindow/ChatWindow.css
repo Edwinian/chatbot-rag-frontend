@@ -67,6 +67,7 @@
     color: white;
     border-radius: 4px;
     cursor: pointer;
+    margin: 5px;
 }
 
 .input-area button:hover {

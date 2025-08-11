@@ -4,6 +4,7 @@ export enum ModelName {
 }
 
 export enum WebSocketAction {
+    CHAT = "chat",
     STOP = "stop",
     CLOSE = "close",
     OPEN = "open",

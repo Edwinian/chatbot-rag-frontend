@@ -10,11 +10,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [sessionId, setSessionId] = useState<string>();
+  const [sessionId, setSessionId] = useState<string | null>(null); // Allow null initially
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const websocket = new WebSocket(`ws://${process.env.REACT_APP_API_BASE_URL}/ws/chat`);
+    if(!process.env.REACT_APP_API_BASE_URL) {
+      return
+    }
+
+    // Ensure WebSocket URL uses ws:// and handles http:// prefix
+    const baseUrl = process.env.REACT_APP_API_BASE_URL.replace(/^http(s)?:\/\//, "");
+    const websocket = new WebSocket(`ws://${baseUrl}/ws/chat`);
     setWs(websocket);
 
     websocket.onopen = () => {
@@ -41,7 +47,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
           return [
             ...prev,
             {
-              id: `${data.session_id}-${Date.now()}`,
+              id: `${data.session_id || "unknown"}-${Date.now()}`,
               content: data.chunk || '',
               isUser: false,
               timestamp: new Date().toLocaleTimeString(),
@@ -52,13 +58,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
       if (data.status === "completed") {
         setMessages((prev) => {
           const lastMessage = prev[prev.length - 1];
-          return [
-            ...prev.slice(0, -1),
-            {
-              ...lastMessage,
-              id: `${lastMessage.id}-completed`,
-            },
-          ];
+          if (lastMessage) {
+            return [
+              ...prev.slice(0, -1),
+              {
+                ...lastMessage,
+                id: `${lastMessage.id}-completed`,
+              },
+            ];
+          }
+          return prev;
         });
       }
       if (data.error) {
@@ -66,17 +75,22 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
       }
     };
 
-    websocket.onclose = () => {
-      console.log("WebSocket disconnected");
+    websocket.onclose = (event) => {
+      console.log("WebSocket closed:", event.code, event.reason);
       setWs(null);
     };
 
-    // return () => {
-    //   if (websocket.readyState === WebSocket.OPEN) {
-    //     websocket.close();
-    //   }
-    // };
-  }, [sessionId]);
+    websocket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    return () => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: WebSocketAction.CLOSE, session_id: sessionId }));
+        ws.close();
+      }
+    };
+  }, [sessionId]); 
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -86,11 +100,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
     if (!input.trim() || !ws || ws.readyState !== WebSocket.OPEN) return;
 
     const message: WebSocketMessage = {
-      action: WebSocketAction.OPEN,
+      action: WebSocketAction.CHAT, // Use CHAT for sending messages
       message: input,
-      model: ModelName.Mixtral_v0_1, // Adjust as needed
       collection_name: selectedCollection,
-      session_id: sessionId,
+      session_id: sessionId || undefined,
     };
 
     ws.send(JSON.stringify(message));
@@ -122,10 +135,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
     <div className="chat-window">
       <div className="messages">
         {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`message ${msg.isUser ? "user" : "bot"}`}
-          >
+          <div key={msg.id} className={`message ${msg.isUser ? "user" : "bot"}`}>
             <div className="message-content">{msg.content}</div>
             <div className="timestamp">{msg.timestamp}</div>
           </div>
