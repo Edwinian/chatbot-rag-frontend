@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ModelName, ChatMessage, WebSocketMessage, WebSocketResponse, WebSocketAction } from "../../types";
+import { ChatMessage, WebSocketMessage, WebSocketResponse, WebSocketAction } from "../../types";
 import "./ChatWindow.css";
 
 interface ChatWindowProps {
@@ -9,12 +9,12 @@ interface ChatWindowProps {
 const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null); // Allow null initially
+  const [ws, setWs] = useState<WebSocket>();
+  const [sessionId, setSessionId] = useState<string>(); 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if(!process.env.REACT_APP_API_BASE_URL) {
+    if(!process.env.REACT_APP_API_BASE_URL || !!ws) {
       return
     }
 
@@ -77,7 +77,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
 
     websocket.onclose = (event) => {
       console.log("WebSocket closed:", event.code, event.reason);
-      setWs(null);
     };
 
     websocket.onerror = (error) => {
@@ -85,9 +84,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
     };
 
     return () => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: WebSocketAction.CLOSE, session_id: sessionId }));
-        ws.close();
+      if (websocket && websocket.readyState === WebSocket.OPEN) {
+        websocket.send(JSON.stringify({ action: WebSocketAction.CLOSE, session_id: sessionId }));
+        websocket.close();
       }
     };
   }, [sessionId]); 
