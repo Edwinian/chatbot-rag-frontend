@@ -22,20 +22,19 @@ const CollectionSelector: React.FC<CollectionSelectorProps> = ({ onSelectCollect
     loadCollections();
   }, []);
 
-  const handleChange = (
-    event: React.SyntheticEvent,
-    value: string | null,
-  ) => {
+  const handleChange = (event: React.SyntheticEvent, value: string | null) => {
     setSelectedCollection(value);
     onSelectCollection(value);
   };
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Typography variant="h6">Select Topic</Typography>
+      <Typography variant="h6" color="text.primary">
+        Select Topic
+      </Typography>
       <Autocomplete
         freeSolo
-        options={["", ...collections]} // Include empty string for "None"
+        options={["", ...collections]}
         value={selectedCollection || ""}
         onChange={handleChange}
         renderInput={(params) => (
@@ -45,10 +44,18 @@ const CollectionSelector: React.FC<CollectionSelectorProps> = ({ onSelectCollect
             variant="outlined"
             size="small"
             placeholder="Select or type a custom topic..."
+            sx={{
+              "& .MuiInputBase-input": {
+                color: "text.primary",
+              },
+              "& .MuiInputLabel-root": {
+                color: "text.secondary",
+              },
+            }}
           />
         )}
         renderOption={(props, option) => (
-          <li {...props} key={option || "none"}>
+          <li {...props} key={option || "none"} style={{ color: "text.primary" }}>
             {option === "" ? <em>None</em> : option}
           </li>
         )}

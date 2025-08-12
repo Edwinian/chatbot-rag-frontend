@@ -14,17 +14,19 @@ import {
 import { ChatMessage, WebSocketMessage, WebSocketResponse, WebSocketAction } from "../../types";
 import SendIcon from "@mui/icons-material/Send";
 import StopIcon from "@mui/icons-material/Stop";
+import { PaletteMode } from "@mui/material/styles";
 
 interface ChatWindowProps {
   selectedCollection: string | null;
+  mode: PaletteMode;
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection, mode }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [ws, setWs] = useState<WebSocket>();
   const [sessionId, setSessionId] = useState<string>();
-  const [isLoading, setIsLoading] = useState(false); // New state for loading
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,7 +42,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
       const data: WebSocketResponse = JSON.parse(event.data);
       if (data.session_id) setSessionId(data.session_id);
       if (data.chunk) {
-        setIsLoading(false); // Turn off loading when chunk is received
+        setIsLoading(false);
         setMessages((prev) => {
           const lastMessage = prev[prev.length - 1];
           if (lastMessage?.isUser === false && !lastMessage?.id.includes("completed")) {
@@ -72,7 +74,18 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
           return prev;
         });
       }
-      if (data.error) console.error("WebSocket error:", data.error);
+      if (data.error) {
+        console.error("WebSocket error:", data.error);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}`,
+            content: "Failed to fetch data. Please try again.",
+            isUser: false,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ]);
+      }
     };
 
     websocket.onclose = (event) => console.log("WebSocket closed:", event.code, event.reason);
@@ -88,7 +101,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]); // Include isLoading to scroll when loading state changes
+  }, [messages, isLoading]);
 
   const sendMessage = () => {
     if (!input.trim() || !ws || ws.readyState !== WebSocket.OPEN) return;
@@ -110,7 +123,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
         timestamp: new Date().toLocaleTimeString(),
       },
     ]);
-    setIsLoading(true); // Show loading message after sending
+    setIsLoading(true);
     setInput("");
   };
 
@@ -121,12 +134,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
   const stopStreaming = () => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ action: WebSocketAction.STOP, session_id: sessionId }));
-      setIsLoading(false); // Turn off loading when stopping
+      setIsLoading(false);
     }
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 2, height: "400px", display: "flex", flexDirection: "column" }}>
+    <Paper
+      elevation={3}
+      sx={{
+        p: 2,
+        height: "400px",
+        display: "flex",
+        flexDirection: "column",
+        bgcolor: "background.paper",
+      }}
+    >
       <Box
         sx={{
           flexGrow: 1,
@@ -134,7 +156,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
           mb: 2,
           pr: 1,
           "&::-webkit-scrollbar": { width: "8px" },
-          "&::-webkit-scrollbar-thumb": { backgroundColor: "#888", borderRadius: "4px" },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "text.secondary",
+            borderRadius: "4px",
+          },
         }}
       >
         <List>
@@ -143,47 +168,50 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
               <ListItem
                 sx={{
                   justifyContent: msg.isUser ? "flex-end" : "flex-start",
+                  py: 1,
                 }}
               >
                 <Box
                   sx={{
                     maxWidth: "70%",
-                    bgcolor: msg.isUser ? "primary.main" : "grey.200",
-                    color: msg.isUser ? "white" : "text.primary",
+                    bgcolor: "background.default",
+                    color: "text.primary",
                     borderRadius: 2,
                     p: 1,
+                    boxShadow: 1,
                   }}
                 >
                   <ListItemText primary={msg.content} />
-                  <Typography variant="caption" sx={{ display: "block", textAlign: "right" }}>
+                  <Typography variant="caption" sx={{ display: "block", textAlign: "right", color: "text.secondary" }}>
                     {msg.timestamp}
                   </Typography>
                 </Box>
               </ListItem>
-              <Divider />
+              <Divider sx={{ bgcolor: "text.secondary" }} />
             </React.Fragment>
           ))}
           {isLoading && (
             <React.Fragment>
-              <ListItem sx={{ justifyContent: "flex-start" }}>
+              <ListItem sx={{ justifyContent: "flex-start", py: 1 }}>
                 <Box
                   sx={{
                     maxWidth: "70%",
-                    bgcolor: "grey.200",
+                    bgcolor: "background.default",
                     borderRadius: 2,
                     p: 1,
                     display: "flex",
                     alignItems: "center",
                     gap: 1,
+                    boxShadow: 1,
                   }}
                 >
-                  <CircularProgress size={16} />
+                  <CircularProgress size={16} color="inherit" />
                   <Typography variant="body2" color="text.secondary">
                     Loading...
                   </Typography>
                 </Box>
               </ListItem>
-              <Divider />
+              <Divider sx={{ bgcolor: "text.secondary" }} />
             </React.Fragment>
           )}
           <div ref={messagesEndRef} />
@@ -198,12 +226,40 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection }) => {
           onKeyPress={handleKeyPress}
           placeholder="Type your message..."
           size="small"
+          sx={{
+            "& .MuiInputBase-input": {
+              color: "text.primary",
+            },
+            "& .MuiInputLabel-root": {
+              color: "text.secondary",
+            },
+          }}
         />
-        <Button variant="contained" onClick={sendMessage} endIcon={<SendIcon />}>
-          Send
+        <Button
+          variant="contained"
+          onClick={sendMessage}
+          sx={{
+            bgcolor: mode === "dark" ? "#cccccc" : "primary.main", // Light gray in dark mode
+            color: mode === "dark" ? "text.primary" : "primary.contrastText", // Readable text
+            "&:hover": {
+              bgcolor: mode === "dark" ? "#bbbbbb" : "primary.dark", // Slightly darker gray on hover
+            },
+          }}
+        >
+          <SendIcon />
         </Button>
-        <Button variant="outlined" color="secondary" onClick={stopStreaming} endIcon={<StopIcon />}>
-          Stop
+        <Button
+          variant="outlined"
+          onClick={stopStreaming}
+          sx={{
+            bgcolor: mode === "dark" ? "#cccccc" : "primary.main", // Light gray in dark mode
+            color: mode === "dark" ? "text.primary" : "primary.contrastText", // Readable text
+            "&:hover": {
+              bgcolor: mode === "dark" ? "#bbbbbb" : "primary.dark", // Slightly darker gray on hover
+            },
+          }}
+        >
+          <StopIcon />
         </Button>
       </Box>
     </Paper>
