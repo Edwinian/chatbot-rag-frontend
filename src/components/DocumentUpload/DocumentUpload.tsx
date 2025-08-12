@@ -1,6 +1,6 @@
 import React, { useState } from "react";
+import { Box, Typography, Button, TextField } from "@mui/material";
 import { uploadDocument } from "../../api";
-import "./DocumentUpload.css";
 
 interface DocumentUploadProps {
   selectedCollection: string | null;
@@ -32,12 +32,27 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection }) =
   };
 
   return (
-    <div className="document-upload">
-      <h3>Upload Document</h3>
-      <input type="file" accept=".pdf,.docx,.html" onChange={handleFileChange} />
-      <button onClick={handleUpload}>Upload</button>
-      {message && <p className="message">{message}</p>}
-    </div>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Typography variant="h6">Upload Document</Typography>
+      <TextField
+        type="file"
+        onChange={handleFileChange}
+        InputProps={{ inputProps: { accept: ".pdf,.docx,.html" } }}
+        variant="outlined"
+        size="small"
+      />
+      <Button variant="contained" onClick={handleUpload}>
+        Upload
+      </Button>
+      {message && (
+        <Typography
+          variant="body2"
+          color={message.includes("Failed") ? "error" : "success"}
+        >
+          {message}
+        </Typography>
+      )}
+    </Box>
   );
 };
 
