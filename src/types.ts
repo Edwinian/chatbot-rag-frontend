@@ -39,10 +39,15 @@ export interface DocumentInfo {
     file_name: string;
 }
 
+export enum StructuredChunkType {
+    HEADING = "heading",
+    BULLET = "bullet",
+    PARAGRAPH = "paragraph",
+}
+
 export interface StructuredChunk {
-    type: "heading" | "bullet" | "paragraph";
+    type: StructuredChunkType;
     content: string;
-    is_bold: boolean;
 }
 
 export interface ChatWindowProps {

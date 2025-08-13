@@ -11,7 +11,7 @@ import {
   Divider,
   CircularProgress,
 } from "@mui/material";
-import { WebSocketMessage, WebSocketResponse, WebSocketAction, ChatWindowProps, ChatMessage, StructuredChunk } from "../../types";
+import { WebSocketMessage, WebSocketResponse, WebSocketAction, ChatWindowProps, ChatMessage, StructuredChunk, StructuredChunkType } from "../../types";
 import SendIcon from "@mui/icons-material/Send";
 import StopIcon from "@mui/icons-material/Stop";
 
@@ -209,33 +209,59 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection, mode }) => 
         </Typography>
       );
     }
+
+    const parseContent = (content: string) => {
+      // Split content into parts, capturing text and <b>wrapped text
+      const parts = content.split(/(<b>[^<]+<\/b>)/g);
+
+      return parts.map((part, i) => {
+        const match = part.match(/^<b>(.*?)<\/b>$/);
+
+        if (match) {
+          // Render the text inside <b> tags with bold styling
+          return (
+            <Typography
+              key={`${index}-${i}`}
+              component="span"
+              variant="inherit"
+              sx={{ fontWeight: "bold" }}
+            >
+              {match[1]}
+            </Typography>
+          );
+        }
+
+        return <Typography key={`${index}-${i}`} component="span" variant="inherit">{part}</Typography>;
+      });
+    };
+
     switch (chunk.type) {
-      case "heading":
+      case StructuredChunkType.HEADING:
         return (
           <Typography
             key={index}
             variant="h6"
-            sx={{ fontWeight: chunk.is_bold ? "bold" : "normal", mt: 1 }}
+            sx={{ fontWeight: "bold", mt: 1 }}
           >
-            {chunk.content}
+            {parseContent(chunk.content)}
           </Typography>
         );
-      case "bullet":
+      case StructuredChunkType.BULLET:
         return (
           <ListItem key={index} sx={{ display: "list-item", pl: 2, py: 0.5 }}>
-            <ListItemText primary={chunk.content} />
+            <ListItemText primary={parseContent(chunk.content)} />
           </ListItem>
         );
-      case "paragraph":
+      case StructuredChunkType.PARAGRAPH:
         return (
           <Typography key={index} variant="body2" sx={{ mb: 1 }}>
-            {chunk.content}
+            {parseContent(chunk.content)}
           </Typography>
         );
       default:
         return (
           <Typography key={index} variant="body2">
-            {chunk.content}
+            {parseContent(chunk.content)}
           </Typography>
         );
     }
