@@ -1,3 +1,5 @@
+import { PaletteMode } from "@mui/material";
+
 export enum ModelName {
     Mixtral_v0_1 = "mixtral_v0_1",
     // Add other models as needed
@@ -12,7 +14,7 @@ export enum WebSocketAction {
 
 export interface ChatMessage {
     id: string;
-    content: string;
+    content: (string | StructuredChunk)[];
     isUser: boolean;
     timestamp: string;
 }
@@ -27,13 +29,23 @@ export interface WebSocketMessage {
 
 export interface WebSocketResponse {
     status: string;
-    chunk?: string;
-    session_id?: string;
-    is_last_chunk?: boolean;
+    chunk: StructuredChunk;
+    session_id: string;
     error?: string;
 }
 
 export interface DocumentInfo {
     file_id: string;
     file_name: string;
+}
+
+export interface StructuredChunk {
+    type: "heading" | "bullet" | "paragraph";
+    content: string;
+    is_bold: boolean;
+}
+
+export interface ChatWindowProps {
+    selectedCollection: string | null;
+    mode: PaletteMode;
 }

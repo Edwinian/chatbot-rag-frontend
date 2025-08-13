@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CollectionSelector, DocumentUpload, ChatWindow } from "./components";
+import { DocumentUpload, ChatWindow } from "./components";
 import { ThemeProvider, Container, Typography, Box, IconButton } from "@mui/material";
 import { Brightness4, Brightness7 } from "@mui/icons-material";
 import { PaletteMode } from "@mui/material/styles";
@@ -66,7 +66,7 @@ const App: React.FC = () => {
             px: { xs: 0, sm: 2 },
           }}
         >
-          <CollectionSelector onSelectCollection={setSelectedCollection} />
+          {/* <CollectionSelector onSelectCollection={setSelectedCollection} /> */}
           <DocumentUpload selectedCollection={selectedCollection} mode={mode} />
           <ChatWindow selectedCollection={selectedCollection} mode={mode} />
         </Box>

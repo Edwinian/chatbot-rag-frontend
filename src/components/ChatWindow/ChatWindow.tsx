@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Box,
   Paper,
@@ -11,100 +11,135 @@ import {
   Divider,
   CircularProgress,
 } from "@mui/material";
-import { ChatMessage, WebSocketMessage, WebSocketResponse, WebSocketAction } from "../../types";
+import { WebSocketMessage, WebSocketResponse, WebSocketAction, ChatWindowProps, ChatMessage, StructuredChunk } from "../../types";
 import SendIcon from "@mui/icons-material/Send";
 import StopIcon from "@mui/icons-material/Stop";
-import { PaletteMode } from "@mui/material/styles";
-
-interface ChatWindowProps {
-  selectedCollection: string | null;
-  mode: PaletteMode;
-}
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection, mode }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [ws, setWs] = useState<WebSocket>();
+  const [ws, setWs] = useState<WebSocket | null>(null);
   const [sessionId, setSessionId] = useState<string>();
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!process.env.REACT_APP_API_BASE_URL || ws) return;
+  const initializeWebSocket = useCallback((): WebSocket | null => {
+    if (!process.env.REACT_APP_API_BASE_URL) {
+      console.error("WebSocket error: REACT_APP_API_BASE_URL is undefined or empty");
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}`,
+          content: ["Failed to connect to WebSocket. Please check server configuration."],
+          isUser: false,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Updated
+        },
+      ]);
+      return null;
+    }
 
     const baseUrl = process.env.REACT_APP_API_BASE_URL.replace(/^http(s)?:\/\//, "");
-    const websocket = new WebSocket(`ws://${baseUrl}/ws/chat`);
-    setWs(websocket);
-
-    websocket.onopen = () => console.log("WebSocket connected");
-
-    websocket.onmessage = (event) => {
-      const data: WebSocketResponse = JSON.parse(event.data);
-      if (data.session_id) setSessionId(data.session_id);
-      if (data.chunk) {
+    try {
+      const websocket = new WebSocket(`ws://${baseUrl}/ws/chat`);
+      websocket.onopen = () => {
+        console.log("WebSocket connected");
         setIsLoading(false);
-        setMessages((prev) => {
-          const lastMessage = prev[prev.length - 1];
-          if (lastMessage?.isUser === false && !lastMessage?.id.includes("completed")) {
-            return [
-              ...prev.slice(0, -1),
-              { ...lastMessage, content: lastMessage.content + data.chunk },
-            ];
+      };
+
+      websocket.onmessage = (event) => {
+        try {
+          const data: WebSocketResponse = JSON.parse(event.data);
+          if (data.session_id) setSessionId(data.session_id);
+          if (data.chunk) {
+            setIsLoading(false);
+            setMessages((prev) => {
+              const lastMessage = prev[prev.length - 1];
+              const chunk: StructuredChunk = data.chunk;
+              if (lastMessage?.isUser === false && !lastMessage?.id.includes("completed")) {
+                return [
+                  ...prev.slice(0, -1),
+                  { ...lastMessage, content: [...lastMessage.content, chunk] },
+                ];
+              }
+              return [
+                ...prev,
+                {
+                  id: `${data.session_id || "unknown"}-${Date.now()}`,
+                  content: [chunk],
+                  isUser: false,
+                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Updated
+                },
+              ];
+            });
           }
-          return [
+          if (data.status === "completed") {
+            setMessages((prev) => {
+              const lastMessage = prev[prev.length - 1];
+              if (lastMessage) {
+                return [
+                  ...prev.slice(0, -1),
+                  { ...lastMessage, id: `${lastMessage.id}-completed` },
+                ];
+              }
+              return prev;
+            });
+          }
+          if (data.error) {
+            console.error("WebSocket error:", data.error);
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `${Date.now()}`,
+                content: ["Failed to fetch data. Please try again."],
+                isUser: false,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Updated
+              },
+            ]);
+          }
+        } catch (error) {
+          console.error("WebSocket message parsing error:", error);
+          setMessages((prev) => [
             ...prev,
             {
-              id: `${data.session_id || "unknown"}-${Date.now()}`,
-              content: data.chunk || "",
+              id: `${Date.now()}`,
+              content: ["Error processing server response."],
               isUser: false,
-              timestamp: new Date().toLocaleTimeString(),
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Updated
             },
-          ];
-        });
-      }
-      if (data.status === "completed") {
-        setMessages((prev) => {
-          const lastMessage = prev[prev.length - 1];
-          if (lastMessage) {
-            return [
-              ...prev.slice(0, -1),
-              { ...lastMessage, id: `${lastMessage.id}-completed` },
-            ];
-          }
-          return prev;
-        });
-      }
-      if (data.error) {
-        console.error("WebSocket error:", data.error);
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}`,
-            content: "Failed to fetch data. Please try again.",
-            isUser: false,
-            timestamp: new Date().toLocaleTimeString(),
-          },
-        ]);
-      }
-    };
+          ]);
+        }
+      };
 
-    websocket.onclose = (event) => console.log("WebSocket closed:", event.code, event.reason);
-    websocket.onerror = (error) => console.error("WebSocket error:", error);
+      websocket.onclose = (event) => {
+        console.log("WebSocket closed:", event.code, event.reason);
+        setWs(null);
+      };
 
-    // return () => {
-    //   if (websocket && websocket.readyState === WebSocket.OPEN) {
-    //     websocket.send(JSON.stringify({ action: WebSocketAction.CLOSE, session_id: sessionId }));
-    //     websocket.close();
-    //   }
-    // };
-  }, [sessionId]);
+      websocket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        setWs(null);
+      };
+
+      return websocket;
+    } catch (error) {
+      console.error("WebSocket initialization error:", error);
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (ws) return;
+
+    const websocket = initializeWebSocket();
+    if (websocket) setWs(websocket);
+  }, [ws, initializeWebSocket]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
   const sendMessage = () => {
-    if (!input.trim() || !ws || ws.readyState !== WebSocket.OPEN) return;
+    if (!input.trim()) return;
 
     const message: WebSocketMessage = {
       action: WebSocketAction.CHAT,
@@ -113,18 +148,46 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection, mode }) => 
       session_id: sessionId || undefined,
     };
 
-    ws.send(JSON.stringify(message));
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `${Date.now()}`,
-        content: input,
-        isUser: true,
-        timestamp: new Date().toLocaleTimeString(),
-      },
-    ]);
-    setIsLoading(true);
-    setInput("");
+    const send = (ws: WebSocket) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(message));
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}`,
+            content: [input],
+            isUser: true,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Updated
+          },
+        ]);
+        setIsLoading(true);
+        setInput("");
+      } else {
+        console.error("WebSocket not open:", ws.readyState);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}`,
+            content: ["Failed to send message. WebSocket not connected."],
+            isUser: false,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Updated
+          },
+        ]);
+      }
+    };
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      send(ws);
+    } else {
+      const newWs = initializeWebSocket();
+      if (newWs) {
+        setWs(newWs);
+        newWs.onopen = () => {
+          console.log("WebSocket opened for message send");
+          send(newWs);
+        };
+      }
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -135,6 +198,46 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection, mode }) => 
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ action: WebSocketAction.STOP, session_id: sessionId }));
       setIsLoading(false);
+    }
+  };
+
+  const renderChunk = (chunk: string | StructuredChunk, index: number) => {
+    if (typeof chunk === "string") {
+      return (
+        <Typography key={index} variant="body2">
+          {chunk}
+        </Typography>
+      );
+    }
+    switch (chunk.type) {
+      case "heading":
+        return (
+          <Typography
+            key={index}
+            variant="h6"
+            sx={{ fontWeight: chunk.is_bold ? "bold" : "normal", mt: 1 }}
+          >
+            {chunk.content}
+          </Typography>
+        );
+      case "bullet":
+        return (
+          <ListItem key={index} sx={{ display: "list-item", pl: 2, py: 0.5 }}>
+            <ListItemText primary={chunk.content} />
+          </ListItem>
+        );
+      case "paragraph":
+        return (
+          <Typography key={index} variant="body2" sx={{ mb: 1 }}>
+            {chunk.content}
+          </Typography>
+        );
+      default:
+        return (
+          <Typography key={index} variant="body2">
+            {chunk.content}
+          </Typography>
+        );
     }
   };
 
@@ -181,8 +284,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection, mode }) => 
                     boxShadow: 1,
                   }}
                 >
-                  <ListItemText primary={msg.content} />
-                  <Typography variant="caption" sx={{ display: "block", textAlign: "right", color: "text.secondary" }}>
+                  {msg.isUser ? (
+                    <Typography variant="body2">{typeof msg.content[0] === 'string' ? msg.content[0] : msg.content[0].content}</Typography>
+                  ) : (
+                    <List sx={{ p: 0 }}>{msg.content.map(renderChunk)}</List>
+                  )}
+                  <Typography
+                    variant="caption"
+                    sx={{ display: "block", textAlign: "right", color: "text.secondary" }}
+                  >
                     {msg.timestamp}
                   </Typography>
                 </Box>
@@ -227,37 +337,41 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection, mode }) => 
           placeholder="Type your message..."
           size="small"
           sx={{
-            "& .MuiInputBase-input": {
-              color: "text.primary",
-            },
-            "& .MuiInputLabel-root": {
-              color: "text.secondary",
-            },
+            "& .MuiInputBase-input": { color: "text.primary" },
+            "& .MuiInputLabel-root": { color: "text.secondary" },
           }}
         />
         <Button
           variant="contained"
           onClick={sendMessage}
           sx={{
-            bgcolor: mode === "dark" ? "#cccccc" : "primary.main", // Light gray in dark mode
-            color: mode === "dark" ? "text.primary" : "primary.contrastText", // Readable text
-            "&:hover": {
-              bgcolor: mode === "dark" ? "#bbbbbb" : "primary.dark", // Slightly darker gray on hover
-            },
+            bgcolor: mode === "dark" ? "#cccccc" : "primary.main",
+            color: mode === "dark" ? "text.primary" : "primary.contrastText",
+            "&:hover": { bgcolor: mode === "dark" ? "#bbbbbb" : "primary.dark" },
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "8px",
+            minWidth: "48px",
           }}
+          aria-label="Send message"
         >
           <SendIcon />
         </Button>
         <Button
-          variant="outlined"
+          variant="contained"
           onClick={stopStreaming}
           sx={{
-            bgcolor: mode === "dark" ? "#cccccc" : "primary.main", // Light gray in dark mode
-            color: mode === "dark" ? "text.primary" : "primary.contrastText", // Readable text
-            "&:hover": {
-              bgcolor: mode === "dark" ? "#bbbbbb" : "primary.dark", // Slightly darker gray on hover
-            },
+            bgcolor: mode === "dark" ? "#cccccc" : "secondary.main",
+            color: mode === "dark" ? "text.primary" : "secondary.contrastText",
+            "&:hover": { bgcolor: mode === "dark" ? "#bbbbbb" : "secondary.dark" },
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "8px",
+            minWidth: "48px",
           }}
+          aria-label="Stop streaming"
         >
           <StopIcon />
         </Button>

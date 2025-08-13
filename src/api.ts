@@ -17,7 +17,7 @@ export const uploadDocument = async (
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await api.post(`/upload-doc?collection_name=${collectionName}`, formData, {
+    const response = await api.post(`/upload-doc`, formData, {
         headers: { "Content-Type": "multipart/form-data" }, // Override for file upload
     });
     return response.data;
