@@ -30,7 +30,7 @@ const Navbar: React.FC<NavbarProps> = ({ mode, toggleTheme }) => {
                         color={location.pathname === path ? 'primary' : 'inherit'}
                         component={Link}
                         to={path}
-                        sx={{ color: 'text.primary' }}
+                        sx={{ color: 'text.primary', fontSize: "large" }}
                     >
                         {name}
                     </Button>))}
