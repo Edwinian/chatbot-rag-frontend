@@ -164,7 +164,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
               ...prev,
               {
                 id: `${Date.now()}`,
-                content: [{ type: StructuredChunkType.PARAGRAPH, content: "Failed to fetch data. Please try again." }],
+                content: [{ type: StructuredChunkType.PARAGRAPH, content: `Failed to fetch data: ${data.error}` }],
                 isUser: false,
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
               },
