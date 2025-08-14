@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from "axios";
-import { DeleteFileRequest, DocumentInfo } from "./types";
+import { ApplicationLog, DeleteFileRequest, DocumentInfo } from "./types";
 
 // Create a custom Axios instance
 const api: AxiosInstance = axios.create({
@@ -33,7 +33,12 @@ export const fetchDocuments = async (): Promise<DocumentInfo[]> => {
     return response.data;
 };
 
-export const deleteDocument = async (request: DeleteFileRequest): Promise<{message?: string, error?: string}> => {
+export const deleteDocument = async (request: DeleteFileRequest): Promise<{ message?: string, error?: string }> => {
     const response = await api.post('/delete-doc', request);
     return response.data;
-  }
+}
+
+export const fetchApplicationLogs = async (sessionId: string): Promise<ApplicationLog[]> => {
+    const response = await api.get(`/get-application-logs?session_id=${sessionId}`);
+    return response.data;
+};

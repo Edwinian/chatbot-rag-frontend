@@ -11,17 +11,100 @@ import {
   Divider,
   CircularProgress,
 } from "@mui/material";
-import { WebSocketMessage, WebSocketResponse, WebSocketAction, ChatMessage, StructuredChunk, StructuredChunkType, PageProps } from "../../types";
+import { useSearchParams } from "react-router-dom";
+import { v4 as uuidv4 } from "uuid";
+import {
+  WebSocketMessage,
+  WebSocketResponse,
+  WebSocketAction,
+  ChatMessage,
+  StructuredChunk,
+  StructuredChunkType,
+  PageProps,
+  ApplicationLog,
+} from "../../types";
 import SendIcon from "@mui/icons-material/Send";
 import StopIcon from "@mui/icons-material/Stop";
+import ChatIcon from "@mui/icons-material/Chat"; // Import icon for New Chat
+import { fetchApplicationLogs } from "../../api";
 
 const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [sessionId, setSessionId] = useState<string>();
   const [isLoading, setIsLoading] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Get sessionId from URL query or generate a new one
+  const sessionId = searchParams.get("sessionId");
+
+  const startNewSession = () => {
+    const sessionId = uuidv4();
+    setSearchParams({ sessionId });
+    setMessages([]); // Clear messages
+    setInput(""); // Clear input field
+  };
+
+  // Fetch chat history for sessionId
+  const fetchSessionMessages = useCallback(async () => {
+    if (!sessionId) return;
+
+    try {
+      const logs = await fetchApplicationLogs(sessionId);
+
+      // If backend has cleared logs on error, start a new session
+      if (!logs.length) {
+        startNewSession();
+      }
+
+      const chatMessages: ChatMessage[] = logs.flatMap((log: ApplicationLog) => [
+        {
+          id: `${log.id}-user`,
+          content: [{ type: StructuredChunkType.PARAGRAPH, content: log.user_query }],
+          isUser: true,
+          timestamp: new Date(log.created_at).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+        {
+          id: `${log.id}-system`,
+          content: log.model_response,
+          isUser: false,
+          timestamp: new Date(log.created_at).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+      ]);
+
+      setMessages((prev) => [
+        ...(prev.length === 0 && logs.length === 0
+          ? [
+            {
+              id: `${Date.now()}`,
+              content: [{ type: StructuredChunkType.PARAGRAPH, content: "Welcome to the chat! How can I assist you today?" }],
+              isUser: false,
+              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            },
+          ]
+          : []),
+        ...chatMessages,
+      ]);
+    } catch (error) {
+      console.error("Error fetching session messages:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}`,
+          content: [{ type: StructuredChunkType.PARAGRAPH, content: "Failed to load chat history. Please try again." }],
+          isUser: false,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    }
+  }, [sessionId]);
+
 
   const initializeWebSocket = useCallback((): WebSocket | null => {
     if (!process.env.REACT_APP_API_BASE_URL) {
@@ -30,7 +113,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
         ...prev,
         {
           id: `${Date.now()}`,
-          content: ["Failed to connect to WebSocket. Please check server configuration."],
+          content: [{ type: StructuredChunkType.PARAGRAPH, content: "Failed to connect to WebSocket. Please check server configuration." }],
           isUser: false,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
@@ -44,26 +127,14 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
       websocket.onopen = () => {
         console.log("WebSocket connected");
         setIsLoading(false);
-        // Add greeting message if messages array is empty
-        setMessages((prev) => {
-          if (prev.length === 0) {
-            return [
-              {
-                id: `${Date.now()}`,
-                content: ["Welcome to the chat! How can I assist you today?"],
-                isUser: false,
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              },
-            ];
-          }
-          return prev;
-        });
       };
 
       websocket.onmessage = (event) => {
         try {
           const data: WebSocketResponse = JSON.parse(event.data);
-          if (data.session_id) setSessionId(data.session_id);
+          if (data.session_id && !sessionId) {
+            setSearchParams({ sessionId: data.session_id });
+          }
           if (data.chunk) {
             setIsLoading(false);
             setMessages((prev) => {
@@ -78,7 +149,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
               return [
                 ...prev,
                 {
-                  id: `${data.session_id || "unknown"}-${Date.now()}`,
+                  id: `${data.session_id || sessionId || "unknown"}-${Date.now()}`,
                   content: [chunk],
                   isUser: false,
                   timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -104,7 +175,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
               ...prev,
               {
                 id: `${Date.now()}`,
-                content: ["Failed to fetch data. Please try again."],
+                content: [{ type: StructuredChunkType.PARAGRAPH, content: "Failed to fetch data. Please try again." }],
                 isUser: false,
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
               },
@@ -116,7 +187,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
             ...prev,
             {
               id: `${Date.now()}`,
-              content: ["Error processing server response."],
+              content: [{ type: StructuredChunkType.PARAGRAPH, content: "Error processing server response." }],
               isUser: false,
               timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             },
@@ -139,7 +210,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
       console.error("WebSocket initialization error:", error);
       return null;
     }
-  }, []);
+  }, [sessionId, setSearchParams]);
 
   const sendMessage = () => {
     if (!input.trim()) return;
@@ -158,9 +229,9 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
           ...prev,
           {
             id: `${Date.now()}`,
-            content: [input],
+            content: [{ type: StructuredChunkType.PARAGRAPH, content: input }],
             isUser: true,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Updated
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           },
         ]);
         setIsLoading(true);
@@ -171,9 +242,9 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
           ...prev,
           {
             id: `${Date.now()}`,
-            content: ["Failed to send message. WebSocket not connected."],
+            content: [{ type: StructuredChunkType.PARAGRAPH, content: "Failed to send message. WebSocket not connected." }],
             isUser: false,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Updated
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           },
         ]);
       }
@@ -214,14 +285,10 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
     }
 
     const parseContent = (content: string) => {
-      // Split content into parts, capturing text and <b>wrapped text
       const parts = content.split(/(<b>[^<]+<\/b>)/g);
-
       return parts.map((part, i) => {
         const match = part.match(/^<b>(.*?)<\/b>$/);
-
         if (match) {
-          // Render the text inside <b> tags with bold styling
           return (
             <Typography
               key={`${index}-${i}`}
@@ -233,7 +300,6 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
             </Typography>
           );
         }
-
         return <Typography key={`${index}-${i}`} component="span" variant="inherit">{part}</Typography>;
       });
     };
@@ -270,9 +336,22 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
     }
   };
 
+  // Initialize sessionId if not in URL
+  useEffect(() => {
+    if (!sessionId) {
+      startNewSession();
+    }
+  }, [sessionId, setSearchParams]);
+
+  // Fetch messages on first render if sessionId exists
+  useEffect(() => {
+    if (sessionId && messages.length === 0) {
+      fetchSessionMessages();
+    }
+  }, [sessionId, fetchSessionMessages, messages.length]);
+
   useEffect(() => {
     if (ws) return;
-
     const websocket = initializeWebSocket();
     if (websocket) setWs(websocket);
   }, [ws, initializeWebSocket]);
@@ -286,12 +365,29 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
       elevation={3}
       sx={{
         p: 2,
-        height: "400px",
         display: "flex",
         flexDirection: "column",
         bgcolor: "background.paper",
       }}
     >
+      <Button
+        variant="outlined"
+        onClick={startNewSession}
+        sx={{
+          bgcolor: mode === "dark" ? "#cccccc" : "background.paper",
+          color: mode === "dark" ? "text.primary" : "text.primary",
+          "&:hover": { bgcolor: mode === "dark" ? "#bbbbbb" : "action.hover" },
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "8px",
+          width: '10%'
+        }}
+        aria-label="New chat"
+      >
+        <ChatIcon sx={{ mr: 1 }} />
+        New Chat
+      </Button>
       <Box
         sx={{
           flexGrow: 1,

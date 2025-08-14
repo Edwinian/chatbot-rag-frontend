@@ -59,10 +59,19 @@ export interface StructuredChunk {
 
 export interface DeleteFileRequest {
     file_id: number;
-  }
+}
 
 export interface PageProps {
     mode: PaletteMode;
     setSelectedCollection?: React.Dispatch<React.SetStateAction<string | undefined>>
     selectedCollection?: string;
-  }
+}
+
+export interface ApplicationLog {
+    id: number;
+    session_id: string;
+    user_query: string;
+    model_response: StructuredChunk[];
+    model: string;
+    created_at: Date;
+}
