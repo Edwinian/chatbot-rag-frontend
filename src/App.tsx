@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material';
 import { PaletteMode } from '@mui/material/styles';
@@ -17,6 +17,11 @@ const App: React.FC = () => {
     { path: RoutePath.ABOUT, component: About },
     { path: RoutePath.DOCUMENT, component: EmbeddedDocument },
   ]
+
+  useEffect(() => {
+    // Update the data-theme attribute on the body
+    document.body.setAttribute("data-theme", mode);
+  }, [mode]);
 
   const toggleTheme = () => {
     setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
