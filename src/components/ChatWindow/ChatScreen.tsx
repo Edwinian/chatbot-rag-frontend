@@ -6,10 +6,10 @@ import Loader from "./Loader";
 interface Props {
     messages: ChatMessage[];
     isLoading: boolean;
-    messagesEndRef: React.RefObject<HTMLDivElement | null>
+    messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
-const MessageScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef }) => {
+const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef }) => {
     const renderChunk = (chunk: string | StructuredChunk, index: number) => {
         if (typeof chunk === "string") {
             return (
@@ -42,11 +42,7 @@ const MessageScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef })
         switch (chunk.type) {
             case StructuredChunkType.HEADING:
                 return (
-                    <Typography
-                        key={index}
-                        variant="h6"
-                        sx={{ fontWeight: "bold", mt: 1 }}
-                    >
+                    <Typography key={index} variant="h6" sx={{ fontWeight: "bold", mt: 1 }}>
                         {parseContent(chunk.content)}
                     </Typography>
                 );
@@ -71,58 +67,61 @@ const MessageScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef })
         }
     };
 
-    return <Box
-        sx={{
-            flexGrow: 1,
-            overflowY: "auto",
-            mb: 2,
-            pr: 1,
-            "&::-webkit-scrollbar": { width: "8px" },
-            "&::-webkit-scrollbar-thumb": {
-                backgroundColor: "text.secondary",
-                borderRadius: "4px",
-            },
-        }}
-    >
-        <List>
-            {messages.map((msg) => (
-                <React.Fragment key={msg.id}>
-                    <ListItem
-                        sx={{
-                            justifyContent: msg.isUser ? "flex-end" : "flex-start",
-                            py: 1,
-                        }}
-                    >
-                        <Box
+    return (
+        <Box
+            sx={{
+                flexGrow: 1,
+                overflowY: "auto",
+                pr: 1,
+                "&::-webkit-scrollbar": { width: "8px" },
+                "&::-webkit-scrollbar-thumb": {
+                    backgroundColor: "text.secondary",
+                    borderRadius: "4px",
+                },
+            }}
+        >
+            <List>
+                {messages.map((msg) => (
+                    <React.Fragment key={msg.id}>
+                        <ListItem
                             sx={{
-                                maxWidth: "70%",
-                                bgcolor: "background.default",
-                                color: "text.primary",
-                                borderRadius: 2,
-                                p: 1,
-                                boxShadow: 1,
+                                justifyContent: msg.isUser ? "flex-end" : "flex-start",
+                                py: 1,
                             }}
                         >
-                            {msg.isUser ? (
-                                <Typography variant="body2">{typeof msg.content[0] === 'string' ? msg.content[0] : msg.content[0].content}</Typography>
-                            ) : (
-                                <List sx={{ p: 0 }}>{msg.content.map(renderChunk)}</List>
-                            )}
-                            <Typography
-                                variant="caption"
-                                sx={{ display: "block", textAlign: "right", color: "text.secondary" }}
+                            <Box
+                                sx={{
+                                    maxWidth: "70%",
+                                    bgcolor: "background.default",
+                                    color: "text.primary",
+                                    borderRadius: 2,
+                                    p: 1,
+                                    boxShadow: 1,
+                                }}
                             >
-                                {msg.timestamp}
-                            </Typography>
-                        </Box>
-                    </ListItem>
-                    <Divider sx={{ bgcolor: "text.secondary" }} />
-                </React.Fragment>
-            ))}
-            {isLoading && <Loader />}
-            <div ref={messagesEndRef} />
-        </List>
-    </Box>
-}
+                                {msg.isUser ? (
+                                    <Typography variant="body2">
+                                        {typeof msg.content[0] === "string" ? msg.content[0] : msg.content[0].content}
+                                    </Typography>
+                                ) : (
+                                    <List sx={{ p: 0 }}>{msg.content.map(renderChunk)}</List>
+                                )}
+                                <Typography
+                                    variant="caption"
+                                    sx={{ display: "block", textAlign: "right", color: "text.secondary" }}
+                                >
+                                    {msg.timestamp}
+                                </Typography>
+                            </Box>
+                        </ListItem>
+                        <Divider sx={{ bgcolor: "text.secondary" }} />
+                    </React.Fragment>
+                ))}
+                {isLoading && <Loader />}
+                <div ref={messagesEndRef} />
+            </List>
+        </Box>
+    );
+};
 
-export default MessageScreen;
+export default ChatScreen;

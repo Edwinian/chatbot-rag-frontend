@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Paper,
-} from "@mui/material";
+import { Paper } from "@mui/material";
 import { useSearchParams } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -15,8 +13,8 @@ import {
   ApplicationLog,
 } from "../../types";
 import { fetchApplicationLogs } from "../../api";
-import MessageScreen from "./MessageScreen";
-import MessageBar from "./MessageBar";
+import ChatScreen from "./ChatScreen";
+import ChatBar from "./ChatBar";
 import NewChatButton from "./NewChatButton";
 
 const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
@@ -26,14 +24,15 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
   // Get sessionId from URL query or generate a new one
   const sessionId = searchParams.get("sessionId");
 
   const startNewSession = () => {
     const sessionId = uuidv4();
     setSearchParams({ sessionId });
-    setMessages([]); // Clear messages
-    setInput(""); // Clear input field
+    setMessages([]);
+    setInput("");
   };
 
   // Fetch chat history for sessionId
@@ -95,7 +94,6 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
       ]);
     }
   }, [sessionId]);
-
 
   const initializeWebSocket = useCallback((): WebSocket | null => {
     if (!process.env.REACT_APP_API_BASE_URL) {
@@ -262,7 +260,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
     }
   };
 
-  // Initialize sessionId 
+  // Initialize sessionId
   useEffect(() => {
     if (!sessionId) {
       startNewSession();
@@ -295,11 +293,13 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
         display: "flex",
         flexDirection: "column",
         bgcolor: "background.paper",
+        position: "relative",
+        minHeight: "400px",
       }}
     >
       <NewChatButton startNewSession={startNewSession} mode={mode} />
-      <MessageScreen messages={messages} isLoading={isLoading} messagesEndRef={messagesEndRef} />
-      <MessageBar stopStreaming={stopStreaming} sendMessage={sendMessage} setInput={setInput} input={input} mode={mode} />
+      <ChatScreen messages={messages} isLoading={isLoading} messagesEndRef={messagesEndRef} />
+      <ChatBar stopStreaming={stopStreaming} sendMessage={sendMessage} setInput={setInput} input={input} mode={mode} />
     </Paper>
   );
 };
