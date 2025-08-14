@@ -1,5 +1,11 @@
 import { PaletteMode } from "@mui/material";
 
+export enum RoutePath {
+    HOME = "/home",
+    ABOUT = "/about",
+    DOCUMENT = "/document",
+}
+
 export enum ModelName {
     Mixtral_v0_1 = "mixtral_v0_1",
     // Add other models as needed
@@ -35,8 +41,9 @@ export interface WebSocketResponse {
 }
 
 export interface DocumentInfo {
-    file_id: string;
-    file_name: string;
+    id: number;
+    filename: string;
+    upload_timestamp: string;
 }
 
 export enum StructuredChunkType {
@@ -50,7 +57,12 @@ export interface StructuredChunk {
     content: string;
 }
 
-export interface ChatWindowProps {
-    selectedCollection: string | null;
+export interface DeleteFileRequest {
+    file_id: number;
+  }
+
+export interface PageProps {
     mode: PaletteMode;
-}
+    setSelectedCollection?: React.Dispatch<React.SetStateAction<string | undefined>>
+    selectedCollection?: string;
+  }

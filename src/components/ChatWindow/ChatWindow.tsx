@@ -11,11 +11,11 @@ import {
   Divider,
   CircularProgress,
 } from "@mui/material";
-import { WebSocketMessage, WebSocketResponse, WebSocketAction, ChatWindowProps, ChatMessage, StructuredChunk, StructuredChunkType } from "../../types";
+import { WebSocketMessage, WebSocketResponse, WebSocketAction, ChatMessage, StructuredChunk, StructuredChunkType, PageProps } from "../../types";
 import SendIcon from "@mui/icons-material/Send";
 import StopIcon from "@mui/icons-material/Stop";
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ selectedCollection, mode }) => {
+const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [ws, setWs] = useState<WebSocket | null>(null);
