@@ -32,7 +32,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
           id: `${Date.now()}`,
           content: ["Failed to connect to WebSocket. Please check server configuration."],
           isUser: false,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Updated
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
       return null;
@@ -44,6 +44,20 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
       websocket.onopen = () => {
         console.log("WebSocket connected");
         setIsLoading(false);
+        // Add greeting message if messages array is empty
+        setMessages((prev) => {
+          if (prev.length === 0) {
+            return [
+              {
+                id: `${Date.now()}`,
+                content: ["Welcome to the chat! How can I assist you today?"],
+                isUser: false,
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              },
+            ];
+          }
+          return prev;
+        });
       };
 
       websocket.onmessage = (event) => {
@@ -67,7 +81,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
                   id: `${data.session_id || "unknown"}-${Date.now()}`,
                   content: [chunk],
                   isUser: false,
-                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Updated
+                  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                 },
               ];
             });
@@ -92,7 +106,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
                 id: `${Date.now()}`,
                 content: ["Failed to fetch data. Please try again."],
                 isUser: false,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Updated
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
               },
             ]);
           }
@@ -104,7 +118,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
               id: `${Date.now()}`,
               content: ["Error processing server response."],
               isUser: false,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Updated
+              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             },
           ]);
         }
@@ -126,17 +140,6 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
       return null;
     }
   }, []);
-
-  useEffect(() => {
-    if (ws) return;
-
-    const websocket = initializeWebSocket();
-    if (websocket) setWs(websocket);
-  }, [ws, initializeWebSocket]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
 
   const sendMessage = () => {
     if (!input.trim()) return;
@@ -266,6 +269,17 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
         );
     }
   };
+
+  useEffect(() => {
+    if (ws) return;
+
+    const websocket = initializeWebSocket();
+    if (websocket) setWs(websocket);
+  }, [ws, initializeWebSocket]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLoading]);
 
   return (
     <Paper

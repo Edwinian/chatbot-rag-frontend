@@ -24,6 +24,10 @@ const EmbeddedDocument: React.FC<PageProps> = ({ mode, selectedCollection }) => 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Styles
+  const headerStyle = { fontWeight: 'bold' }
+  const rowStyle = { padding: '0px' }
+
   // Fetch documents from backend
   const fetchMany = useCallback(async () => {
     setIsLoading(true);
@@ -112,23 +116,24 @@ const EmbeddedDocument: React.FC<PageProps> = ({ mode, selectedCollection }) => 
             <Table sx={{ minWidth: 650 }} aria-label="Embedded Document List table">
               <TableHead>
                 <TableRow>
-                  <TableCell align="center">File Name</TableCell>
-                  <TableCell align="center">Upload Time</TableCell>
-                  <TableCell align="center">Actions</TableCell>
+                  <TableCell align="left" sx={{ ...headerStyle, paddingLeft: '50px' }}>File Name</TableCell>
+                  <TableCell align="center" sx={headerStyle}>Upload Time</TableCell>
+                  <TableCell align="center" sx={headerStyle}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {documents.map((doc) => (
-                  <TableRow key={doc.id}>
-                    <TableCell align="center">{doc.filename}</TableCell>
-                    <TableCell align="center">{new Date(doc.upload_timestamp).toLocaleString()}</TableCell>
-                    <TableCell align="center">
+                {documents.map(({ id, filename, upload_timestamp }) => (
+                  <TableRow key={id}>
+                    <TableCell align="left" sx={{ ...rowStyle, paddingLeft: '50px' }}>{filename}</TableCell>
+                    <TableCell align="center" sx={rowStyle}>{new Date(upload_timestamp).toLocaleString()}</TableCell>
+                    <TableCell align="center" sx={rowStyle}>
                       <Button
                         variant="contained"
                         color="error"
                         size="small"
-                        onClick={() => deleteOne(doc.id)}
+                        onClick={() => deleteOne(id)}
                         disabled={isLoading} // Disable during loading
+                        sx={{ margin: '5px' }}
                       >
                         <DeleteIcon />
                       </Button>
