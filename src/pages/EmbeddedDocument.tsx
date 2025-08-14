@@ -16,6 +16,7 @@ import PageContainer from '../components/PageContainer/PageContainer';
 import DocumentUpload from '../components/DocumentUpload/DocumentUpload';
 import { DocumentInfo, DeleteFileRequest, PageProps } from '../types';
 import { deleteDocument, fetchDocuments } from '../api';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const EmbeddedDocument: React.FC<PageProps> = ({ mode, selectedCollection }) => {
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
@@ -129,7 +130,7 @@ const EmbeddedDocument: React.FC<PageProps> = ({ mode, selectedCollection }) => 
                         onClick={() => deleteOne(doc.id)}
                         disabled={isLoading} // Disable during loading
                       >
-                        Delete
+                        <DeleteIcon />
                       </Button>
                     </TableCell>
                   </TableRow>
