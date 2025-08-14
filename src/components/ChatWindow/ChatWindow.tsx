@@ -1,15 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
-  Box,
   Paper,
-  TextField,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  Typography,
-  Divider,
-  CircularProgress,
 } from "@mui/material";
 import { useSearchParams } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
@@ -23,10 +14,10 @@ import {
   PageProps,
   ApplicationLog,
 } from "../../types";
-import SendIcon from "@mui/icons-material/Send";
-import StopIcon from "@mui/icons-material/Stop";
-import ChatIcon from "@mui/icons-material/Chat"; // Import icon for New Chat
 import { fetchApplicationLogs } from "../../api";
+import MessageScreen from "./MessageScreen";
+import MessageBar from "./MessageBar";
+import NewChatButton from "./NewChatButton";
 
 const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -264,10 +255,6 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") sendMessage();
-  };
-
   const stopStreaming = () => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ action: WebSocketAction.STOP, session_id: sessionId }));
@@ -275,73 +262,19 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
     }
   };
 
-  const renderChunk = (chunk: string | StructuredChunk, index: number) => {
-    if (typeof chunk === "string") {
-      return (
-        <Typography key={index} variant="body2">
-          {chunk}
-        </Typography>
-      );
-    }
-
-    const parseContent = (content: string) => {
-      const parts = content.split(/(<b>[^<]+<\/b>)/g);
-      return parts.map((part, i) => {
-        const match = part.match(/^<b>(.*?)<\/b>$/);
-        if (match) {
-          return (
-            <Typography
-              key={`${index}-${i}`}
-              component="span"
-              variant="inherit"
-              sx={{ fontWeight: "bold" }}
-            >
-              {match[1]}
-            </Typography>
-          );
-        }
-        return <Typography key={`${index}-${i}`} component="span" variant="inherit">{part}</Typography>;
-      });
-    };
-
-    switch (chunk.type) {
-      case StructuredChunkType.HEADING:
-        return (
-          <Typography
-            key={index}
-            variant="h6"
-            sx={{ fontWeight: "bold", mt: 1 }}
-          >
-            {parseContent(chunk.content)}
-          </Typography>
-        );
-      case StructuredChunkType.BULLET:
-        return (
-          <ListItem key={index} sx={{ display: "list-item", pl: 2, py: 0.5 }}>
-            <ListItemText primary={parseContent(chunk.content)} />
-          </ListItem>
-        );
-      case StructuredChunkType.PARAGRAPH:
-        return (
-          <Typography key={index} variant="body2" sx={{ mb: 1 }}>
-            {parseContent(chunk.content)}
-          </Typography>
-        );
-      default:
-        return (
-          <Typography key={index} variant="body2">
-            {parseContent(chunk.content)}
-          </Typography>
-        );
-    }
-  };
-
-  // Initialize sessionId if not in URL
+  // Initialize sessionId 
   useEffect(() => {
     if (!sessionId) {
       startNewSession();
     }
   }, [sessionId, setSearchParams]);
+
+  // Initialize WebSocket connection
+  useEffect(() => {
+    if (ws) return;
+    const websocket = initializeWebSocket();
+    if (websocket) setWs(websocket);
+  }, [ws, initializeWebSocket]);
 
   // Fetch messages on first render if sessionId exists
   useEffect(() => {
@@ -349,12 +282,6 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
       fetchSessionMessages();
     }
   }, [sessionId, fetchSessionMessages, messages.length]);
-
-  useEffect(() => {
-    if (ws) return;
-    const websocket = initializeWebSocket();
-    if (websocket) setWs(websocket);
-  }, [ws, initializeWebSocket]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -370,148 +297,9 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
         bgcolor: "background.paper",
       }}
     >
-      <Button
-        variant="outlined"
-        onClick={startNewSession}
-        sx={{
-          bgcolor: mode === "dark" ? "#cccccc" : "background.paper",
-          color: mode === "dark" ? "text.primary" : "text.primary",
-          "&:hover": { bgcolor: mode === "dark" ? "#bbbbbb" : "action.hover" },
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: "8px",
-          width: '10%'
-        }}
-        aria-label="New chat"
-      >
-        <ChatIcon sx={{ mr: 1 }} />
-        New Chat
-      </Button>
-      <Box
-        sx={{
-          flexGrow: 1,
-          overflowY: "auto",
-          mb: 2,
-          pr: 1,
-          "&::-webkit-scrollbar": { width: "8px" },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "text.secondary",
-            borderRadius: "4px",
-          },
-        }}
-      >
-        <List>
-          {messages.map((msg) => (
-            <React.Fragment key={msg.id}>
-              <ListItem
-                sx={{
-                  justifyContent: msg.isUser ? "flex-end" : "flex-start",
-                  py: 1,
-                }}
-              >
-                <Box
-                  sx={{
-                    maxWidth: "70%",
-                    bgcolor: "background.default",
-                    color: "text.primary",
-                    borderRadius: 2,
-                    p: 1,
-                    boxShadow: 1,
-                  }}
-                >
-                  {msg.isUser ? (
-                    <Typography variant="body2">{typeof msg.content[0] === 'string' ? msg.content[0] : msg.content[0].content}</Typography>
-                  ) : (
-                    <List sx={{ p: 0 }}>{msg.content.map(renderChunk)}</List>
-                  )}
-                  <Typography
-                    variant="caption"
-                    sx={{ display: "block", textAlign: "right", color: "text.secondary" }}
-                  >
-                    {msg.timestamp}
-                  </Typography>
-                </Box>
-              </ListItem>
-              <Divider sx={{ bgcolor: "text.secondary" }} />
-            </React.Fragment>
-          ))}
-          {isLoading && (
-            <React.Fragment>
-              <ListItem sx={{ justifyContent: "flex-start", py: 1 }}>
-                <Box
-                  sx={{
-                    maxWidth: "70%",
-                    bgcolor: "background.default",
-                    borderRadius: 2,
-                    p: 1,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    boxShadow: 1,
-                  }}
-                >
-                  <CircularProgress size={16} color="inherit" />
-                  <Typography variant="body2" color="text.secondary">
-                    Loading...
-                  </Typography>
-                </Box>
-              </ListItem>
-              <Divider sx={{ bgcolor: "text.secondary" }} />
-            </React.Fragment>
-          )}
-          <div ref={messagesEndRef} />
-        </List>
-      </Box>
-      <Box sx={{ display: "flex", gap: 1 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Type your message..."
-          size="small"
-          sx={{
-            "& .MuiInputBase-input": { color: "text.primary" },
-            "& .MuiInputLabel-root": { color: "text.secondary" },
-          }}
-        />
-        <Button
-          variant="contained"
-          onClick={sendMessage}
-          sx={{
-            bgcolor: mode === "dark" ? "#cccccc" : "primary.main",
-            color: mode === "dark" ? "text.primary" : "primary.contrastText",
-            "&:hover": { bgcolor: mode === "dark" ? "#bbbbbb" : "primary.dark" },
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "8px",
-            minWidth: "48px",
-          }}
-          aria-label="Send message"
-        >
-          <SendIcon />
-        </Button>
-        <Button
-          variant="contained"
-          onClick={stopStreaming}
-          sx={{
-            bgcolor: mode === "dark" ? "#cccccc" : "secondary.main",
-            color: mode === "dark" ? "text.primary" : "secondary.contrastText",
-            "&:hover": { bgcolor: mode === "dark" ? "#bbbbbb" : "secondary.dark" },
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "8px",
-            minWidth: "48px",
-          }}
-          aria-label="Stop streaming"
-        >
-          <StopIcon />
-        </Button>
-      </Box>
+      <NewChatButton startNewSession={startNewSession} mode={mode} />
+      <MessageScreen messages={messages} isLoading={isLoading} messagesEndRef={messagesEndRef} />
+      <MessageBar stopStreaming={stopStreaming} sendMessage={sendMessage} setInput={setInput} input={input} mode={mode} />
     </Paper>
   );
 };
