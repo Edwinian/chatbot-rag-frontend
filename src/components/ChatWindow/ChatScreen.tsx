@@ -123,14 +123,13 @@ const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef, rege
                                     {msg.timestamp}
                                 </Typography>
                             </Box>
-                            {!msg.isUser && i !== 0 && (
-                                <MessageAction
-                                    message={msg}
-                                    regenerate={regenerate}
-                                    mode={mode}
-                                    isLastMessage={i === messages.length - 1}
-                                />
-                            )}
+                            <MessageAction
+                                message={msg}
+                                regenerate={regenerate}
+                                mode={mode}
+                                enableRegenerate={!msg.isUser && i !== 0 && i === messages.length - 1}
+                                isUser={msg.isUser}
+                            />
                         </ListItem>
                         <Divider sx={{ bgcolor: "text.secondary" }} />
                     </React.Fragment>

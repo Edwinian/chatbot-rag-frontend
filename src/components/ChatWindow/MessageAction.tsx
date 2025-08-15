@@ -4,14 +4,15 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { ChatMessage, StructuredChunk } from "../../types";
 
-interface Props {
+interface MessageActionProps {
     message: ChatMessage;
     regenerate: () => void;
     mode: PaletteMode;
-    isLastMessage: boolean;
+    enableRegenerate: boolean;
+    isUser: boolean
 }
 
-const MessageAction: React.FC<Props> = ({ message, regenerate, mode, isLastMessage }) => {
+const MessageAction = ({ message, regenerate, mode, enableRegenerate, isUser }: MessageActionProps) => {
     const [openToast, setOpenToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
     const [toastSeverity, setToastSeverity] = useState<"success" | "error">("success");
@@ -53,12 +54,12 @@ const MessageAction: React.FC<Props> = ({ message, regenerate, mode, isLastMessa
                 sx={{
                     display: "flex",
                     gap: 0.5,
-                    justifyContent: "flex-start",
+                    justifyContent: isUser ? "flex-end" : "flex-start",
                     mt: 0.5,
                     width: { xs: "85%", sm: "70%" }, // Match message bubble width
                 }}
             >
-                {isLastMessage && (
+                {enableRegenerate && (
                     <Tooltip title="Regenerate" arrow enterDelay={300}>
                         <Button
                             variant="outlined"
