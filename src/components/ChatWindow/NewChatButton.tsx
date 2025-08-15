@@ -22,6 +22,7 @@ const NewChatButton = ({ startNewSession, mode }: Props) => {
                 mb: 2, // Space below button to separate from ChatScreen
                 width: "10%", // Allow natural width
                 minWidth: "120px", // Ensure readable width
+                fontWeight: "bold",
             }}
             aria-label="New chat"
         >

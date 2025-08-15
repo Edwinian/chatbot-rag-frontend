@@ -62,7 +62,7 @@ const EmbeddedDocument: React.FC<PageProps> = ({ mode, selectedCollection }) => 
     }
   }, [fetchMany]);
 
-  // Callback for DocumentUpload to trigger refetch
+  // Callback for DocumentUpload
   const handleUploadSuccess = useCallback(
     (uploadMessage: string) => {
       setMessage(uploadMessage);
@@ -81,8 +81,8 @@ const EmbeddedDocument: React.FC<PageProps> = ({ mode, selectedCollection }) => 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%', maxWidth: '1200px', px: { xs: 0, sm: 2 } }}>
         {/* Document Upload Section */}
         <DocumentUpload
+          setMessage={setMessage}
           selectedCollection={selectedCollection || null} // Use prop or null
-          mode={mode}
           onUploadSuccess={handleUploadSuccess} // Pass callback for refetch
         />
         {message && (

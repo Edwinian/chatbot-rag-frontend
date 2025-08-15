@@ -2,16 +2,14 @@ import React, { useState, useCallback } from 'react';
 import { Box, Typography, Paper, CircularProgress } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import { uploadDocument } from '../../api';
-import { PaletteMode } from '@mui/material/styles';
 
 interface DocumentUploadProps {
   selectedCollection: string | null;
-  mode: PaletteMode;
+  setMessage: (value: React.SetStateAction<string | null>) => void
   onUploadSuccess?: (message: string) => void; // Callback for successful upload
 }
 
-const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, mode, onUploadSuccess }) => {
-  const [message, setMessage] = useState<string | null>(null);
+const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, onUploadSuccess, setMessage }) => {
   const [isUploading, setIsUploading] = useState(false);
 
   const onDrop = useCallback(
@@ -20,12 +18,21 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, mod
         setMessage('Please select a valid .pdf, .docx, or .html file.');
         return;
       }
+
       const file = acceptedFiles[0];
+      const validExtensions = ['.pdf', '.docx', '.html'];
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+
+      if (!validExtensions.includes(fileExtension)) {
+        setMessage('Please select a valid .pdf, .docx, or .html file.');
+        return;
+      }
+
       setIsUploading(true);
       setMessage(null);
       try {
         const response = await uploadDocument(file, selectedCollection);
-        setMessage(response.message);
+
         if (onUploadSuccess) {
           onUploadSuccess(response.message); // Trigger callback
         }
@@ -85,14 +92,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, mod
           </Box>
         )}
       </Paper>
-      {message && (
-        <Typography
-          variant="body2"
-          color={message.includes('Failed') ? 'error.main' : 'success.main'}
-        >
-          {message}
-        </Typography>
-      )}
     </Box>
   );
 };
