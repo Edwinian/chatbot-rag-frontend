@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from "axios";
-import { ApplicationLog, DeleteFileRequest, DocumentInfo } from "./types";
+import { ApplicationLog, DeleteFileRequest, DocumentInfo, UploadResponse } from "./types";
 
 // Create a custom Axios instance
 const api: AxiosInstance = axios.create({
@@ -13,7 +13,7 @@ const api: AxiosInstance = axios.create({
 export const uploadDocument = async (
     file: File,
     collectionName: string | null
-): Promise<{ message: string; file_id: string }> => {
+): Promise<UploadResponse> => {
     const formData = new FormData();
     formData.append("file", file);
 

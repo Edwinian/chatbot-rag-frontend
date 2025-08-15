@@ -75,3 +75,5 @@ export interface ApplicationLog {
     model: string;
     created_at: Date;
 }
+
+export interface UploadResponse { message: string; file_id: string }

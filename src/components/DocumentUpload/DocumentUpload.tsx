@@ -2,11 +2,12 @@ import React, { useState, useCallback } from 'react';
 import { Box, Typography, Paper, CircularProgress } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import { uploadDocument } from '../../api';
+import { AxiosError } from 'axios';
 
 interface DocumentUploadProps {
   selectedCollection: string | null;
   setMessage: (value: React.SetStateAction<string | null>) => void
-  onUploadSuccess?: (message: string) => void; // Callback for successful upload
+  onUploadSuccess: (message: string) => void; // Callback for successful upload
 }
 
 const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, onUploadSuccess, setMessage }) => {
@@ -19,12 +20,13 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, onU
         return;
       }
 
+      const imageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"]
+      const allowedExtensions = [...[".pdf", ".doc", ".docx", ".html", ".txt"], ...imageExtensions];
       const file = acceptedFiles[0];
-      const validExtensions = ['.pdf', '.docx', '.html'];
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
 
-      if (!validExtensions.includes(fileExtension)) {
-        setMessage('Please select a valid .pdf, .docx, or .html file.');
+      if (!allowedExtensions.includes(fileExtension)) {
+        setMessage('Please select a valid file.');
         return;
       }
 
@@ -33,12 +35,13 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, onU
       try {
         const response = await uploadDocument(file, selectedCollection);
 
-        if (onUploadSuccess) {
+        if (response.message) {
           onUploadSuccess(response.message); // Trigger callback
         }
-      } catch (error) {
-        setMessage('Failed to upload document.');
-        console.error(error);
+      } catch (error: unknown) {
+        if (error instanceof AxiosError) {
+          setMessage(error.response?.data?.detail);
+        }
       } finally {
         setIsUploading(false);
       }
