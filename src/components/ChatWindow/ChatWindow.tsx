@@ -33,11 +33,17 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   };
 
   const startNewSession = useCallback(() => {
+    const lastMessage = getLastUserMessage()
+
+    if (!lastMessage) {
+      return
+    }
+
     const sessionId = uuidv4();
     setSearchParams({ sessionId });
     setMessages([]);
     setInput("");
-  }, [setSearchParams]);
+  }, [setSearchParams, messages, getLastUserMessage]);
 
   const fetchSessionMessages = useCallback(async () => {
     if (!sessionId) return;
