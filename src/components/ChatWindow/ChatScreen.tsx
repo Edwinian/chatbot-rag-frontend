@@ -2,14 +2,18 @@ import { Box, Divider, List, ListItem, ListItemText, Typography } from "@mui/mat
 import { ChatMessage, StructuredChunk, StructuredChunkType } from "../../types";
 import React from "react";
 import Loader from "./Loader";
+import { PaletteMode } from "@mui/material";
+import MessageAction from "./MessageAction";
 
 interface Props {
     messages: ChatMessage[];
     isLoading: boolean;
     messagesEndRef: React.RefObject<HTMLDivElement | null>;
+    regenerate: () => void; // Updated to match prop name
+    mode: PaletteMode;
 }
 
-const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef }) => {
+const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef, regenerate, mode }) => {
     const renderChunk = (chunk: string | StructuredChunk, index: number) => {
         if (typeof chunk === "string") {
             return (
@@ -73,6 +77,7 @@ const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef }) =>
                 flexGrow: 1,
                 overflowY: "auto",
                 pr: 1,
+                pb: { xs: 10, sm: 12 },
                 "&::-webkit-scrollbar": { width: "8px" },
                 "&::-webkit-scrollbar-thumb": {
                     backgroundColor: "text.secondary",
@@ -81,17 +86,19 @@ const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef }) =>
             }}
         >
             <List>
-                {messages.map((msg) => (
+                {messages.map((msg, i) => (
                     <React.Fragment key={msg.id}>
                         <ListItem
                             sx={{
                                 justifyContent: msg.isUser ? "flex-end" : "flex-start",
                                 py: 1,
+                                flexDirection: "column",
+                                alignItems: msg.isUser ? "flex-end" : "flex-start",
                             }}
                         >
                             <Box
                                 sx={{
-                                    maxWidth: "70%",
+                                    maxWidth: { xs: "85%", sm: "70%" },
                                     bgcolor: "background.default",
                                     color: "text.primary",
                                     borderRadius: 2,
@@ -113,6 +120,14 @@ const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef }) =>
                                     {msg.timestamp}
                                 </Typography>
                             </Box>
+                            {!msg.isUser && i !== 0 && (
+                                <MessageAction
+                                    message={msg}
+                                    regenerate={regenerate} // Pass isRegeneration: true
+                                    mode={mode}
+                                    isLastMessage={i === messages.length - 1}
+                                />
+                            )}
                         </ListItem>
                         <Divider sx={{ bgcolor: "text.secondary" }} />
                     </React.Fragment>

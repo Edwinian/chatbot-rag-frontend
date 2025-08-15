@@ -21,13 +21,17 @@ const ChatBar = ({ stopStreaming, sendMessage, setInput, input, mode }: Props) =
                 display: "flex",
                 gap: 1,
                 position: "fixed",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                p: 2,
+                bottom: 5,
+                marginTop: '10px',
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: { xs: "95%", sm: "80%", md: "60%", lg: "50%" },
+                maxWidth: "500px",
+                p: { xs: 1, sm: 2 },
                 bgcolor: mode === "dark" ? "background.paper" : "background.default",
                 zIndex: 1000,
                 boxShadow: "0 -2px 5px rgba(0,0,0,0.1)",
+                borderRadius: 0.50,
             }}
         >
             <TextField

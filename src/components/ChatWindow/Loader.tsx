@@ -17,7 +17,7 @@ const Loader = () => {
             >
                 <CircularProgress size={16} color="inherit" />
                 <Typography variant="body2" color="text.secondary">
-                    Loader...
+                    Loading...
                 </Typography>
             </Box>
         </ListItem>

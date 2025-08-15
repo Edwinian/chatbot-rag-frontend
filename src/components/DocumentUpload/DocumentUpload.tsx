@@ -43,7 +43,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, onU
         setIsUploading(false);
       }
     },
-    [selectedCollection, onUploadSuccess]
+    [selectedCollection, onUploadSuccess, setMessage]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

@@ -20,7 +20,7 @@ export enum WebSocketAction {
 
 export interface ChatMessage {
     id: string;
-    content: (string | StructuredChunk)[];
+    content: StructuredChunk[];
     isUser: boolean;
     timestamp: string;
 }

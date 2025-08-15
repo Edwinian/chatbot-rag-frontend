@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Paper } from "@mui/material";
+import { Box, Paper } from "@mui/material";
 import { useSearchParams } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -13,9 +13,9 @@ import {
   ApplicationLog,
 } from "../../types";
 import { fetchApplicationLogs } from "../../api";
+import NewChatButton from "./NewChatButton";
 import ChatScreen from "./ChatScreen";
 import ChatBar from "./ChatBar";
-import NewChatButton from "./NewChatButton";
 
 const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -25,24 +25,26 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Get sessionId from URL query or generate a new one
   const sessionId = searchParams.get("sessionId");
 
-  const startNewSession = () => {
+  const getLastUserMessage = (): string => {
+    const userMessages = messages.filter((msg) => msg.isUser);
+    return userMessages.length > 0 ? userMessages[userMessages.length - 1].content[0].content : "";
+  };
+
+  const startNewSession = useCallback(() => {
     const sessionId = uuidv4();
     setSearchParams({ sessionId });
     setMessages([]);
     setInput("");
-  };
+  }, [setSearchParams]);
 
-  // Fetch chat history for sessionId
   const fetchSessionMessages = useCallback(async () => {
     if (!sessionId) return;
 
     try {
       const logs = await fetchApplicationLogs(sessionId);
 
-      // If backend has cleared logs on error, start a new session
       if (!logs.length) {
         startNewSession();
       }
@@ -93,7 +95,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
         },
       ]);
     }
-  }, [sessionId]);
+  }, [sessionId, startNewSession]);
 
   const initializeWebSocket = useCallback((): WebSocket | null => {
     if (!process.env.REACT_APP_API_BASE_URL) {
@@ -202,11 +204,15 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   }, [sessionId, setSearchParams]);
 
   const sendMessage = () => {
-    if (!input.trim()) return;
+    // Use input for normal messages, last user message for regeneration
+    const content = input || getLastUserMessage();
+    const isUserSend = !!input;
+
+    if (!content.trim()) return;
 
     const message: WebSocketMessage = {
       action: WebSocketAction.CHAT,
-      message: input,
+      message: content,
       collection_name: selectedCollection,
       session_id: sessionId || undefined,
     };
@@ -214,17 +220,25 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
     const send = (ws: WebSocket) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(message));
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}`,
-            content: [{ type: StructuredChunkType.PARAGRAPH, content: input }],
-            isUser: true,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          },
-        ]);
+
+        // Only add user message to state for normal sends, not regeneration
+        if (isUserSend) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `${Date.now()}`,
+              content: [{ type: StructuredChunkType.PARAGRAPH, content }],
+              isUser: true,
+              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            },
+          ]);
+        }
+
         setIsLoading(true);
-        setInput("");
+
+        if (isUserSend) {
+          setInput("");
+        }
       } else {
         console.error("WebSocket not open:", ws.readyState);
         setMessages((prev) => [
@@ -260,21 +274,18 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
     }
   };
 
-  // Initialize sessionId
   useEffect(() => {
     if (!sessionId) {
       startNewSession();
     }
-  }, [sessionId, setSearchParams]);
+  }, [sessionId, startNewSession]);
 
-  // Initialize WebSocket connection
   useEffect(() => {
     if (ws) return;
     const websocket = initializeWebSocket();
     if (websocket) setWs(websocket);
   }, [ws, initializeWebSocket]);
 
-  // Fetch messages on first render if sessionId exists
   useEffect(() => {
     if (sessionId && messages.length === 0) {
       fetchSessionMessages();
@@ -286,21 +297,47 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   }, [messages, isLoading]);
 
   return (
-    <Paper
-      elevation={3}
+    <Box
       sx={{
-        p: 2,
         display: "flex",
-        flexDirection: "column",
-        bgcolor: "background.paper",
-        position: "relative",
-        minHeight: "400px",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        px: { xs: 1, sm: 2, md: 3 },
+        bgcolor: mode === "dark" ? "background.default" : "background.paper",
       }}
     >
-      <NewChatButton startNewSession={startNewSession} mode={mode} />
-      <ChatScreen messages={messages} isLoading={isLoading} messagesEndRef={messagesEndRef} />
-      <ChatBar stopStreaming={stopStreaming} sendMessage={sendMessage} setInput={setInput} input={input} mode={mode} />
-    </Paper>
+      <Paper
+        elevation={3}
+        sx={{
+          p: { xs: 1, sm: 2 },
+          display: "flex",
+          flexDirection: "column",
+          bgcolor: "background.paper",
+          width: { xs: "100%", sm: "90%", md: "80%", lg: "70%" },
+          maxWidth: "800px",
+          minHeight: "calc(100vh - 120px)",
+          position: "relative",
+          borderRadius: 2,
+        }}
+      >
+        <NewChatButton startNewSession={startNewSession} mode={mode} />
+        <ChatScreen
+          messages={messages}
+          isLoading={isLoading}
+          messagesEndRef={messagesEndRef}
+          regenerate={sendMessage}
+          mode={mode}
+        />
+        <ChatBar
+          stopStreaming={stopStreaming}
+          sendMessage={sendMessage}
+          setInput={setInput}
+          input={input}
+          mode={mode}
+        />
+      </Paper>
+    </Box>
   );
 };
 
