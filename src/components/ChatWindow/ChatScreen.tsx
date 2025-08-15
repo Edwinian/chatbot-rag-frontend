@@ -9,7 +9,7 @@ interface Props {
     messages: ChatMessage[];
     isLoading: boolean;
     messagesEndRef: React.RefObject<HTMLDivElement | null>;
-    regenerate: () => void; // Updated to match prop name
+    regenerate: () => void;
     mode: PaletteMode;
 }
 
