@@ -4,6 +4,7 @@ import React from "react";
 import Loader from "./Loader";
 import { PaletteMode } from "@mui/material";
 import MessageAction from "./MessageAction";
+import MessageTypography from "./MessageTypography";
 
 interface Props {
     messages: ChatMessage[];
@@ -17,9 +18,9 @@ const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef, rege
     const renderChunk = (chunk: string | StructuredChunk, index: number) => {
         if (typeof chunk === "string") {
             return (
-                <Typography key={index} variant="body2">
+                <MessageTypography key={index} >
                     {chunk}
-                </Typography>
+                </MessageTypography>
             );
         }
 
@@ -29,26 +30,26 @@ const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef, rege
                 const match = part.match(/^<b>(.*?)<\/b>$/);
                 if (match) {
                     return (
-                        <Typography
+                        <MessageTypography
                             key={`${index}-${i}`}
                             component="span"
                             variant="inherit"
                             sx={{ fontWeight: "bold" }}
                         >
                             {match[1]}
-                        </Typography>
+                        </MessageTypography>
                     );
                 }
-                return <Typography key={`${index}-${i}`} component="span" variant="inherit">{part}</Typography>;
+                return <MessageTypography key={`${index}-${i}`} component="span" variant="inherit">{part}</MessageTypography>;
             });
         };
 
         switch (chunk.type) {
             case StructuredChunkType.HEADING:
                 return (
-                    <Typography key={index} variant="h6" sx={{ fontWeight: "bold", mt: 1 }}>
+                    <MessageTypography key={index} variant="h6" sx={{ fontWeight: "bold", mt: 1 }}>
                         {parseContent(chunk.content)}
-                    </Typography>
+                    </MessageTypography>
                 );
             case StructuredChunkType.BULLET:
                 return (
@@ -58,15 +59,15 @@ const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef, rege
                 );
             case StructuredChunkType.PARAGRAPH:
                 return (
-                    <Typography key={index} variant="body2" sx={{ mb: 1 }}>
+                    <MessageTypography key={index} sx={{ mb: 1 }}>
                         {parseContent(chunk.content)}
-                    </Typography>
+                    </MessageTypography>
                 );
             default:
                 return (
-                    <Typography key={index} variant="body2">
+                    <MessageTypography key={index}>
                         {parseContent(chunk.content)}
-                    </Typography>
+                    </MessageTypography>
                 );
         }
     };
@@ -107,11 +108,13 @@ const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef, rege
                                 }}
                             >
                                 {msg.isUser ? (
-                                    <Typography variant="body2">
+                                    <MessageTypography>
                                         {typeof msg.content[0] === "string" ? msg.content[0] : msg.content[0].content}
-                                    </Typography>
+                                    </MessageTypography>
                                 ) : (
-                                    <List sx={{ p: 0 }}>{msg.content.map(renderChunk)}</List>
+                                    <List sx={{
+                                        p: 0,
+                                    }}>{msg.content.map(renderChunk)}</List>
                                 )}
                                 <Typography
                                     variant="caption"
@@ -123,7 +126,7 @@ const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef, rege
                             {!msg.isUser && i !== 0 && (
                                 <MessageAction
                                     message={msg}
-                                    regenerate={regenerate} // Pass isRegeneration: true
+                                    regenerate={regenerate}
                                     mode={mode}
                                     isLastMessage={i === messages.length - 1}
                                 />

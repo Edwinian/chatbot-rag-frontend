@@ -27,10 +27,10 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
 
   const sessionId = searchParams.get("sessionId");
 
-  const getLastUserMessage = (): string => {
+  const getLastUserMessage = useCallback(() => {
     const userMessages = messages.filter((msg) => msg.isUser);
     return userMessages.length > 0 ? userMessages[userMessages.length - 1].content[0].content : "";
-  };
+  }, [messages]);
 
   const startNewSession = useCallback(() => {
     const lastMessage = getLastUserMessage()
@@ -43,7 +43,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
     setSearchParams({ sessionId });
     setMessages([]);
     setInput("");
-  }, [setSearchParams, messages, getLastUserMessage]);
+  }, [setSearchParams, getLastUserMessage]);
 
   const fetchSessionMessages = useCallback(async () => {
     if (!sessionId) return;
