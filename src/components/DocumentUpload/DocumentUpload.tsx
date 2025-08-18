@@ -12,6 +12,9 @@ interface DocumentUploadProps {
 
 const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, onUploadSuccess, setMessage }) => {
   const [isUploading, setIsUploading] = useState(false);
+  const imageExtensions = [".jpg", ".jpeg", ".png"];
+  const fileExtensions = [".pdf", ".doc", ".docx", ".txt"];
+  const allowedExtensions = [...fileExtensions, ...imageExtensions];
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -20,8 +23,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, onU
         return;
       }
 
-      const imageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"]
-      const allowedExtensions = [...[".pdf", ".doc", ".docx", ".html", ".txt"], ...imageExtensions];
       const file = acceptedFiles[0];
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
 
@@ -87,7 +88,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, onU
             ? 'Uploading...'
             : isDragActive
               ? 'Drop the file here...'
-              : 'Drag and drop a file here, or click to select (.pdf, .docx, .html)'}
+              : `Drag and drop a file here, or click to select (${allowedExtensions.join(', ')})`}
         </Typography>
         {isUploading && (
           <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center' }}>
