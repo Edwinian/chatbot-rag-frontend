@@ -9,10 +9,11 @@ interface MessageActionProps {
     regenerate: () => void;
     mode: PaletteMode;
     enableRegenerate: boolean;
+    enableCopy: boolean;
     isUser: boolean
 }
 
-const MessageAction = ({ message, regenerate, mode, enableRegenerate, isUser }: MessageActionProps) => {
+const MessageAction = ({ message, regenerate, mode, enableRegenerate, enableCopy, isUser, }: MessageActionProps) => {
     const [openToast, setOpenToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
     const [toastSeverity, setToastSeverity] = useState<"success" | "error">("success");
@@ -80,7 +81,7 @@ const MessageAction = ({ message, regenerate, mode, enableRegenerate, isUser }: 
                         </Button>
                     </Tooltip>
                 )}
-                <Tooltip title="Copy" arrow enterDelay={300}>
+                {enableCopy && <Tooltip title="Copy" arrow enterDelay={300}>
                     <Button
                         variant="outlined"
                         size="small"
@@ -98,7 +99,7 @@ const MessageAction = ({ message, regenerate, mode, enableRegenerate, isUser }: 
                     >
                         <ContentCopyIcon />
                     </Button>
-                </Tooltip>
+                </Tooltip>}
             </Box>
             <Snackbar
                 open={openToast}

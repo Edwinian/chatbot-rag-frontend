@@ -129,6 +129,7 @@ const ChatScreen: React.FC<Props> = ({ messages, isLoading, messagesEndRef, rege
                                 mode={mode}
                                 enableRegenerate={!msg.isUser && i !== 0 && i === messages.length - 1}
                                 isUser={msg.isUser}
+                                enableCopy={i !== 0}
                             />
                         </ListItem>
                         <Divider sx={{ bgcolor: "text.secondary" }} />
