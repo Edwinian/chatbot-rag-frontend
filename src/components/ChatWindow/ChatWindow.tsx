@@ -12,7 +12,7 @@ import {
   PageProps,
   ApplicationLog,
 } from "../../types";
-import { fetchApplicationLogs } from "../../api";
+import { deleteApplicationLogs, fetchApplicationLogs } from "../../api";
 import NewChatButton from "./NewChatButton";
 import ChatScreen from "./ChatScreen";
 import ChatBar from "./ChatBar";
@@ -24,7 +24,6 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
   const sessionId = searchParams.get("sessionId");
 
   const getLastUserMessage = useCallback(() => {
@@ -33,17 +32,21 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   }, [messages]);
 
   const startNewSession = useCallback(() => {
-    const sessionId = uuidv4();
-    setSearchParams({ sessionId });
+    if (sessionId) {
+      deleteApplicationLogs({ sessionId });
+    }
+
+    const newSessionId = uuidv4();
+    setSearchParams({ sessionId: newSessionId });
     setMessages([]);
     setInput("");
-  }, [setSearchParams]);
+  }, [setSearchParams, sessionId]);
 
   const fetchSessionMessages = useCallback(async () => {
     if (!sessionId) return;
 
     try {
-      const logs = await fetchApplicationLogs(sessionId);
+      const logs = await fetchApplicationLogs({ sessionId });
 
       if (!logs.length) {
         startNewSession();

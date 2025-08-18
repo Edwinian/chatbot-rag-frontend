@@ -9,6 +9,20 @@ const api: AxiosInstance = axios.create({
     },
 });
 
+const buildUrlWithQuery = (url: string, params: Record<string, any>): string => {
+    const urlObj = new URL(url);
+    const searchParams = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined) {
+            searchParams.append(key, String(value));
+        }
+    }
+
+    urlObj.search = searchParams.toString();
+    return urlObj.toString();
+}
+
 // API functions
 export const uploadDocument = async (
     file: File,
@@ -38,7 +52,14 @@ export const deleteDocument = async (request: DeleteFileRequest): Promise<{ mess
     return response.data;
 }
 
-export const fetchApplicationLogs = async (sessionId: string): Promise<ApplicationLog[]> => {
-    const response = await api.get(`/get-application-logs?session_id=${sessionId}`);
+export const fetchApplicationLogs = async ({ sessionId }: { sessionId?: string }): Promise<ApplicationLog[]> => {
+    const url = buildUrlWithQuery('/get-application-logs', { session_id: sessionId });
+    const response = await api.get(url);
+    return response.data;
+};
+
+export const deleteApplicationLogs = async ({ sessionId }: { sessionId?: string }): Promise<ApplicationLog[]> => {
+    const url = buildUrlWithQuery('/delete-application-logs', { session_id: sessionId });
+    const response = await api.post(url);
     return response.data;
 };
