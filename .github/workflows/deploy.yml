@@ -87,147 +87,89 @@ jobs:
               echo ".env file creation and permissions set"
             '
 
-      - name: Create Dockerfile for React App
-        run: |
-          cat > Dockerfile << 'EOF'
-          # Build stage
-          FROM node:20-alpine as build
-          WORKDIR /app
-          COPY package*.json ./
-          RUN npm ci --only=production
-          COPY . .
-          RUN npm run build
-
-          # Production stage
-          FROM nginx:alpine
-          COPY --from=build /app/build /usr/share/nginx/html
-          COPY nginx.conf /etc/nginx/conf.d/default.conf
-          EXPOSE 80
-          CMD ["nginx", "-g", "daemon off;"]
-          EOF
-
-          cat > nginx.conf << 'EOF'
-          server {
-              listen 80;
-              server_name localhost;
-              root /usr/share/nginx/html;
-              index index.html;
-              
-              location / {
-                  try_files $uri $uri/ /index.html;
-              }
-              
-              location /api {
-                  proxy_pass http://localhost:8000;
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-              }
-          }
-          EOF
-
-      - name: Copy Docker files to EC2
-        run: |
-          scp -o StrictHostKeyChecking=no \
-            Dockerfile nginx.conf \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ env.EC2_DOCKER_DIR }}/
-
-      - name: Install Docker on EC2 if needed
-        run: |
-          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            set -e
-            set -x
-            
-            echo "Checking if Docker is installed..."
-            if ! command -v docker >/dev/null 2>&1; then
-              echo "Installing Docker..."
-              sudo apt-get update
-              sudo apt-get install -y docker.io
-              sudo systemctl enable docker
-              sudo systemctl start docker
-              sudo usermod -aG docker $USER
-              echo "Docker installed successfully"
-            else
-              echo "Docker is already installed"
-            fi
-            docker --version
-          '
-
       - name: Deploy React Docker Container
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 30
-          max_attempts: 3
-          command: |
-            ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-              set -e
-              set -x
-              
-              echo "Starting Docker deployment in ${{ env.EC2_DOCKER_DIR }}"
-              cd ${{ env.EC2_DOCKER_DIR }}
-              
-              # Check disk space
-              echo "Checking disk space..."
-              if ! df -h / | grep -q "[0-9]G"; then
-                echo "Insufficient disk space"
-                exit 1
-              fi
-              
-              # Stop and remove existing container if it exists
-              echo "Cleaning up existing container..."
-              if docker ps -a --filter "name=${{ env.CONTAINER_NAME }}" | grep -q "${{ env.CONTAINER_NAME }}"; then
-                docker stop ${{ env.CONTAINER_NAME }} || true
-                docker rm ${{ env.CONTAINER_NAME }} || true
-              fi
-              
-              # Remove old images to free space
-              echo "Removing old Docker images..."
-              docker image prune -a -f || true
-              
-              # Build the Docker image
-              echo "Building Docker image..."
-              docker build -t ${{ env.DOCKER_IMAGE }} .
-              
-              if [ $? -ne 0 ]; then
-                echo "Docker build failed"
-                exit 1
-              fi
-              
-              # Run the container
-              echo "Starting Docker container..."
-              docker run -d \
-                --name ${{ env.CONTAINER_NAME }} \
-                --restart unless-stopped \
-                -p 80:80 \
-                ${{ env.DOCKER_IMAGE }}
-              
-              if [ $? -ne 0 ]; then
-                echo "Failed to start Docker container"
-                exit 1
-              fi
-              
-              # Wait for container to be healthy
-              echo "Waiting for container to start..."
-              sleep 10
-              
-              # Check container status
-              echo "Checking container status..."
-              if ! docker ps --filter "name=${{ env.CONTAINER_NAME }}" --format "{{.Status}}" | grep -q "Up"; then
-                echo "Container failed to start"
-                docker logs ${{ env.CONTAINER_NAME }}
-                exit 1
-              fi
-              
-              # Test the application
-              echo "Testing application..."
-              if ! curl -f -s http://localhost > /dev/null; then
-                echo "Application test failed"
-                docker logs ${{ env.CONTAINER_NAME }}
-                exit 1
-              fi
-              
-              echo "Docker deployment completed successfully"
-            '
+            timeout_minutes: 30
+            max_attempts: 3
+            command: |
+                ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+                    set -e
+                    set -x
+                    
+                    echo "Starting Docker deployment in ${{ env.EC2_DOCKER_DIR }}"
+                    cd ${{ env.EC2_DOCKER_DIR }}
+                    
+                    # Check disk space
+                    echo "Checking disk space..."
+                    if ! df -h / | grep -q "[0-9]G"; then
+                    echo "Insufficient disk space"
+                    exit 1
+                    fi
+                    
+                    # Stop and remove existing container if it exists
+                    echo "Cleaning up existing container..."
+                    if docker ps -a --filter "name=${{ env.CONTAINER_NAME }}" | grep -q "${{ env.CONTAINER_NAME }}"; then
+                    docker stop ${{ env.CONTAINER_NAME }} || true
+                    docker rm ${{ env.CONTAINER_NAME }} || true
+                    fi
+                    
+                    # Check if we can reuse existing image
+                    echo "Checking for existing image..."
+                    if docker images -q ${{ env.DOCKER_IMAGE }} | grep -q .; then
+                    echo "Removing old image to ensure fresh build..."
+                    docker rmi ${{ env.DOCKER_IMAGE }} || true
+                    fi
+                    
+                    # Build the Docker image with cache optimization
+                    echo "Building Docker image (this may take a few minutes)..."
+                    echo "Build started at: $(date)"
+                    
+                    # Build with cache from previous layers if available
+                    docker build --progress=plain -t ${{ env.DOCKER_IMAGE }} .
+                    
+                    if [ $? -ne 0 ]; then
+                    echo "Docker build failed"
+                    exit 1
+                    fi
+                    
+                    echo "Build completed at: $(date)"
+                    
+                    # Run the container
+                    echo "Starting Docker container..."
+                    docker run -d \
+                    --name ${{ env.CONTAINER_NAME }} \
+                    --restart unless-stopped \
+                    -p 80:80 \
+                    ${{ env.DOCKER_IMAGE }}
+                    
+                    if [ $? -ne 0 ]; then
+                    echo "Failed to start Docker container"
+                    exit 1
+                    fi
+                    
+                    # Wait for container to be healthy
+                    echo "Waiting for container to start..."
+                    sleep 10
+                    
+                    # Check container status
+                    echo "Checking container status..."
+                    if ! docker ps --filter "name=${{ env.CONTAINER_NAME }}" --format "{{.Status}}" | grep -q "Up"; then
+                    echo "Container failed to start"
+                    docker logs ${{ env.CONTAINER_NAME }}
+                    exit 1
+                    fi
+                    
+                    # Test the application
+                    echo "Testing application..."
+                    if ! curl -f -s http://localhost > /dev/null; then
+                    echo "Application test failed"
+                    docker logs ${{ env.CONTAINER_NAME }}
+                    exit 1
+                    fi
+                    
+                    echo "Docker deployment completed successfully at: $(date)"
+                '
 
       - name: Verify Deployment
         run: |
