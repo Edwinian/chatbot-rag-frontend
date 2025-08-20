@@ -5,10 +5,9 @@ on:
     branches: [master]
 
 env:
-  DOCKER_IMAGE: react-app
-  DOCKER_COMPOSE_FILE: docker-compose.yml
   EC2_DOCKER_DIR: /home/ubuntu/react-app
-  NGINX_CONTAINER: react-nginx
+  DOCKER_IMAGE: react-app
+  CONTAINER_NAME: react-frontend
 
 jobs:
   deploy:
@@ -23,17 +22,25 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           known_hosts: ${{ secrets.EC2_HOST }}
 
+      - name: Debug SSH Key Setup
+        run: |
+            echo "Testing SSH key setup..."
+            echo "EC2_USER: ${{ secrets.EC2_USER }}"
+            echo "EC2_HOST: ${{ secrets.EC2_HOST }}"
+            
+            # Test if the key action works
+            echo "Listing SSH agent identities:"
+            ssh-add -l || echo "SSH agent not available"
+
       - name: Initialize or Update Git Repository
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 10
           max_attempts: 3
           command: |
-            # Log the connection values for debugging
             echo "Attempting SSH connection to: ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}"
             echo "EC2_DOCKER_DIR: ${{ env.EC2_DOCKER_DIR }}"
-            echo "Github repository: ${{ github.repository }}"
-            
+
             ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
               set -e
               set -x
@@ -111,7 +118,7 @@ jobs:
               }
               
               location /api {
-                  proxy_pass http://backend:8000;
+                  proxy_pass http://localhost:8000;
                   proxy_set_header Host $host;
                   proxy_set_header X-Real-IP $remote_addr;
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -119,58 +126,31 @@ jobs:
           }
           EOF
 
-          cat > docker-compose.yml << 'EOF'
-          version: '3.8'
-          services:
-            frontend:
-              build:
-                context: .
-                dockerfile: Dockerfile
-              image: react-app
-              container_name: react-frontend
-              restart: unless-stopped
-              ports:
-                - "80:80"
-              networks:
-                - app-network
-              depends_on:
-                - backend
-
-            backend:
-              image: fastapi-app  # This should match your backend image name
-              container_name: fastapi-backend
-              restart: unless-stopped
-              ports:
-                - "8000:8000"
-              env_file:
-                - .env
-              networks:
-                - app-network
-
-          networks:
-            app-network:
-              driver: bridge
-          EOF
-
       - name: Copy Docker files to EC2
         run: |
           scp -o StrictHostKeyChecking=no \
-            Dockerfile nginx.conf docker-compose.yml \
+            Dockerfile nginx.conf \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ env.EC2_DOCKER_DIR }}/
 
-      - name: Free Disk Space
+      - name: Install Docker on EC2 if needed
         run: |
           ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
             set -e
             set -x
             
-            echo "Cleaning up disk space..."
-            sudo apt-get clean
-            sudo docker system prune -a -f --volumes || true
-            sudo rm -rf /var/lib/apt/lists/*
-            sudo journalctl --vacuum-size=50M
-            
-            echo "Disk space cleanup completed"
+            echo "Checking if Docker is installed..."
+            if ! command -v docker >/dev/null 2>&1; then
+              echo "Installing Docker..."
+              sudo apt-get update
+              sudo apt-get install -y docker.io
+              sudo systemctl enable docker
+              sudo systemctl start docker
+              sudo usermod -aG docker $USER
+              echo "Docker installed successfully"
+            else
+              echo "Docker is already installed"
+            fi
+            docker --version
           '
 
       - name: Deploy React Docker Container
@@ -193,27 +173,48 @@ jobs:
                 exit 1
               fi
               
-              # Stop and remove existing containers
-              echo "Cleaning up existing containers..."
-              docker-compose down || true
+              # Stop and remove existing container if it exists
+              echo "Cleaning up existing container..."
+              if docker ps -a --filter "name=${{ env.CONTAINER_NAME }}" | grep -q "${{ env.CONTAINER_NAME }}"; then
+                docker stop ${{ env.CONTAINER_NAME }} || true
+                docker rm ${{ env.CONTAINER_NAME }} || true
+              fi
               
               # Remove old images to free space
               echo "Removing old Docker images..."
               docker image prune -a -f || true
               
-              # Build and start containers
-              echo "Building and starting Docker containers..."
-              docker-compose up -d --build
+              # Build the Docker image
+              echo "Building Docker image..."
+              docker build -t ${{ env.DOCKER_IMAGE }} .
               
-              # Wait for containers to be healthy
-              echo "Waiting for containers to start..."
+              if [ $? -ne 0 ]; then
+                echo "Docker build failed"
+                exit 1
+              fi
+              
+              # Run the container
+              echo "Starting Docker container..."
+              docker run -d \
+                --name ${{ env.CONTAINER_NAME }} \
+                --restart unless-stopped \
+                -p 80:80 \
+                ${{ env.DOCKER_IMAGE }}
+              
+              if [ $? -ne 0 ]; then
+                echo "Failed to start Docker container"
+                exit 1
+              fi
+              
+              # Wait for container to be healthy
+              echo "Waiting for container to start..."
               sleep 10
               
               # Check container status
               echo "Checking container status..."
-              if ! docker ps --filter "name=react-frontend" --format "{{.Status}}" | grep -q "Up"; then
-                echo "Frontend container failed to start"
-                docker logs react-frontend
+              if ! docker ps --filter "name=${{ env.CONTAINER_NAME }}" --format "{{.Status}}" | grep -q "Up"; then
+                echo "Container failed to start"
+                docker logs ${{ env.CONTAINER_NAME }}
                 exit 1
               fi
               
@@ -221,7 +222,7 @@ jobs:
               echo "Testing application..."
               if ! curl -f -s http://localhost > /dev/null; then
                 echo "Application test failed"
-                docker logs react-frontend
+                docker logs ${{ env.CONTAINER_NAME }}
                 exit 1
               fi
               
@@ -234,6 +235,6 @@ jobs:
             set -x
             echo "Verifying deployment..."
             docker ps
-            docker-compose logs --tail=20
+            docker logs ${{ env.CONTAINER_NAME }} --tail=20
             curl -I http://localhost
           '
