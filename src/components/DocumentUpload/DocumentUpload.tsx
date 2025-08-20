@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Box, Typography, Paper, CircularProgress } from '@mui/material';
 import { useDropzone } from 'react-dropzone';
 import { uploadDocument } from '../../api';
@@ -12,9 +12,7 @@ interface DocumentUploadProps {
 
 const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, onUploadSuccess, setMessage }) => {
   const [isUploading, setIsUploading] = useState(false);
-  const imageExtensions = [".jpg", ".jpeg", ".png"];
-  const fileExtensions = [".pdf", ".doc", ".docx", ".txt"];
-  const allowedExtensions = [...fileExtensions, ...imageExtensions];
+  const allowedExtensions = useMemo(() => [".pdf", ".docx", ".txt", ".jpg", ".jpeg", ".png"], []);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -47,7 +45,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ selectedCollection, onU
         setIsUploading(false);
       }
     },
-    [selectedCollection, onUploadSuccess, setMessage]
+    [selectedCollection, onUploadSuccess, setMessage, allowedExtensions]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

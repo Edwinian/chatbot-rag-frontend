@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from "axios";
-import { ApplicationLog, DeleteFileRequest, DocumentInfo, UploadResponse } from "./types";
+import { ApplicationLog, ApplicationLogQueryParams, DeleteFileRequest, DocumentInfo, UploadResponse } from "./types";
 
 // Create a custom Axios instance
 const api: AxiosInstance = axios.create({
@@ -9,19 +9,22 @@ const api: AxiosInstance = axios.create({
     },
 });
 
-const buildUrlWithQuery = (url: string, params: Record<string, any>): string => {
-    const urlObj = new URL(url);
+const getPathWithQueryParams = <T>(path: string, queryParams: T): string => {
+    if (!queryParams) {
+        return path;
+    }
+
     const searchParams = new URLSearchParams();
 
-    for (const [key, value] of Object.entries(params)) {
-        if (value !== undefined) {
+    for (const [key, value] of Object.entries(queryParams)) {
+        if (value) {
             searchParams.append(key, String(value));
         }
     }
 
-    urlObj.search = searchParams.toString();
-    return urlObj.toString();
-}
+    const queryString = searchParams.toString();
+    return queryString ? `${path}?${queryString}` : path;
+};
 
 // API functions
 export const uploadDocument = async (
@@ -52,14 +55,14 @@ export const deleteDocument = async (request: DeleteFileRequest): Promise<{ mess
     return response.data;
 }
 
-export const fetchApplicationLogs = async ({ sessionId }: { sessionId?: string }): Promise<ApplicationLog[]> => {
-    const url = buildUrlWithQuery('/get-application-logs', { session_id: sessionId });
+export const fetchApplicationLogs = async (queryParams: Partial<ApplicationLogQueryParams>): Promise<ApplicationLog[]> => {
+    const url = getPathWithQueryParams<Partial<ApplicationLogQueryParams>>('/get-application-logs', queryParams);
     const response = await api.get(url);
     return response.data;
 };
 
-export const deleteApplicationLogs = async ({ sessionId }: { sessionId?: string }): Promise<ApplicationLog[]> => {
-    const url = buildUrlWithQuery('/delete-application-logs', { session_id: sessionId });
+export const deleteApplicationLogs = async (queryParams: Partial<ApplicationLogQueryParams>): Promise<ApplicationLog[]> => {
+    const url = getPathWithQueryParams<Partial<ApplicationLogQueryParams>>('/delete-application-logs', queryParams);
     const response = await api.post(url);
     return response.data;
 };

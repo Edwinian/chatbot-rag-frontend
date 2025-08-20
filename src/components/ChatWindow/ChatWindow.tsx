@@ -33,7 +33,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
 
   const startNewSession = useCallback(() => {
     if (sessionId) {
-      deleteApplicationLogs({ sessionId });
+      deleteApplicationLogs({ session_id: sessionId });
     }
 
     const newSessionId = uuidv4();
@@ -46,7 +46,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
     if (!sessionId) return;
 
     try {
-      const logs = await fetchApplicationLogs({ sessionId });
+      const logs = await fetchApplicationLogs({ session_id: sessionId });
 
       if (!logs.length) {
         startNewSession();
@@ -116,6 +116,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
     }
 
     const baseUrl = process.env.REACT_APP_API_BASE_URL.replace(/^http(s)?:\/\//, "");
+
     try {
       const websocket = new WebSocket(`ws://${baseUrl}/ws/chat`);
       websocket.onopen = () => {

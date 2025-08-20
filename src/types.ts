@@ -76,4 +76,8 @@ export interface ApplicationLog {
     created_at: Date;
 }
 
+export interface ApplicationLogQueryParams {
+    session_id: string
+}
+
 export interface UploadResponse { message: string; file_id: string }
