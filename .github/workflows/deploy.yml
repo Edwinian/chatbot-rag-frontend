@@ -2,7 +2,7 @@ name: Deploy React to EC2
 
 on:
   push:
-    branches: [main]  # Adjust to your default branch (e.g., main or master)
+    branches: [master]  
 
 env:
   EC2_DEPLOY_DIR: /var/www/html  # Directory to serve React build files
