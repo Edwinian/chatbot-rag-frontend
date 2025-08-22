@@ -118,7 +118,7 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
     const baseUrl = process.env.REACT_APP_API_BASE_URL.replace(/^http(s)?:\/\//, "");
 
     try {
-      const websocket = new WebSocket(`wss://${baseUrl}/ws/chat`);
+      const websocket = new WebSocket(`ws://${baseUrl}/ws/chat`); // wss in production
       websocket.onopen = () => {
         console.log("WebSocket connected");
         setIsLoading(false);
