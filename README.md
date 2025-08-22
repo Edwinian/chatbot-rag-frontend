@@ -9,6 +9,7 @@ REACT_APP_API_BASE_URL=
 # Setup
 - npm install
 - npm run start
+- The application will be available at http://localhost:3000 or the next available port
 
 
 
