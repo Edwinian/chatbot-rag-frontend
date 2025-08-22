@@ -14,9 +14,7 @@ const About: React.FC = () => {
                     About Edwin's Chatbot
                 </Typography>
                 <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'start' }}>
-                    This chatbot application allows users to upload documents and interact with an AI-powered chat interface.
-                    It supports document uploads in PDF, DOCX, and HTML formats and provides real-time chat functionality
-                    using WebSocket for seamless communication.
+                    This is a Retrieval-Augmented Generation (RAG) chatbot application built with FastAPI, LangChain, and ChromaDB. It features a user-friendly chat window for real-time interaction with a conversational AI, powered by HuggingFace models, and supports queries enriched with document context and optional web search integration. The application also includes a dedicated page for uploading documents (PDF, DOCX, TXT, PNG, .etc) to be embedded into ChromaDB for retrieval, with automatic PII redaction for enhanced privacy. SQLite is used for storing chat logs and document metadata, ensuring persistence and traceability.
                 </Typography>
             </Box>
         </PageContainer>
