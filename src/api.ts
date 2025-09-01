@@ -3,7 +3,7 @@ import { ApplicationLog, ApplicationLogQueryParams, DeleteFileRequest, DocumentI
 
 // Create a custom Axios instance
 const api: AxiosInstance = axios.create({
-    baseURL: process.env.REACT_APP_API_BASE_URL,
+    baseURL: "http://localhost:8000", // Use environment variable in production
     headers: {
         "Content-Type": "application/json", // Default content type
     },

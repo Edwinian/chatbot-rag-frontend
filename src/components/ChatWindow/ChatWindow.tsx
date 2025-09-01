@@ -98,24 +98,9 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   }, [sessionId, startNewSession]);
 
   const initializeWebSocket = useCallback((): WebSocket | null => {
-    if (!process.env.REACT_APP_API_BASE_URL) {
-      console.error("WebSocket error: REACT_APP_API_BASE_URL is undefined or empty");
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}`,
-          content: [{ type: StructuredChunkType.PARAGRAPH, content: "Failed to connect to WebSocket. Please check server configuration." }],
-          isUser: false,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
-      return null;
-    }
-
-    const baseUrl = process.env.REACT_APP_API_BASE_URL.replace(/^http(s)?:\/\//, "");
-
     try {
-      const websocket = new WebSocket(`ws://${baseUrl}/ws/chat`); // wss in production
+      const websocket = new WebSocket(`ws://localhost:8000/ws/chat`); // use environment variable and wss in production
+
       websocket.onopen = () => {
         console.log("WebSocket connected");
         setIsLoading(false);
