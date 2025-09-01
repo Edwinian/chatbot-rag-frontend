@@ -11,8 +11,24 @@ interface Props {
 }
 
 const ChatBar = ({ stopStreaming, sendMessage, setInput, input, mode }: Props) => {
+    const buttonStyle = {
+        bgcolor: mode === "dark" ? "#cccccc" : "primary.main",
+        color: mode === "dark" ? "text.primary" : "primary.contrastText",
+        "&:hover": { bgcolor: mode === "dark" ? "#bbbbbb" : "primary.dark" },
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "8px",
+        minWidth: "48px",
+        height: "40px",
+    }
+
     const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter") sendMessage();
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault(); // Prevent default Enter behavior (form submission)
+            sendMessage();
+        }
+        // Shift + Enter will automatically add a newline due to multiline prop
     };
 
     return (
@@ -22,16 +38,15 @@ const ChatBar = ({ stopStreaming, sendMessage, setInput, input, mode }: Props) =
                 gap: 1,
                 position: "fixed",
                 bottom: 5,
-                marginTop: '10px',
-                left: "50%",
+                left: "55.5%",
                 transform: "translateX(-50%)",
                 width: { xs: "95%", sm: "80%", md: "60%", lg: "50%" },
-                maxWidth: "500px",
+                maxWidth: "850px",
                 p: { xs: 1, sm: 2 },
                 bgcolor: mode === "dark" ? "background.paper" : "background.default",
                 zIndex: 1000,
                 boxShadow: "0 -2px 5px rgba(0,0,0,0.1)",
-                borderRadius: 0.50,
+                borderRadius: 0.5,
             }}
         >
             <TextField
@@ -39,48 +54,48 @@ const ChatBar = ({ stopStreaming, sendMessage, setInput, input, mode }: Props) =
                 variant="outlined"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyUp={handleKeyPress}
+                onKeyDown={handleKeyPress}
                 placeholder="Type your message..."
-                size="small"
+                multiline
+                minRows={1}
+                maxRows={10} // Limit maximum height to prevent excessive growth
                 sx={{
-                    "& .MuiInputBase-input": { color: "text.primary" },
-                    "& .MuiInputLabel-root": { color: "text.secondary" },
+                    "& .MuiInputBase-root": {
+                        color: "text.primary",
+                        alignItems: "flex-start",
+                    },
+                    "& .MuiInputBase-input": {
+                        color: "text.primary",
+                    },
+                    "& .MuiInputLabel-root": {
+                        color: "text.secondary",
+                    },
                 }}
             />
-            <Button
-                variant="contained"
-                onClick={sendMessage}
+            <Box
                 sx={{
-                    bgcolor: mode === "dark" ? "#cccccc" : "primary.main",
-                    color: mode === "dark" ? "text.primary" : "primary.contrastText",
-                    "&:hover": { bgcolor: mode === "dark" ? "#bbbbbb" : "primary.dark" },
                     display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    padding: "8px",
-                    minWidth: "48px",
+                    gap: 1,
+                    alignSelf: "flex-end",
                 }}
-                aria-label="Send message"
             >
-                <SendIcon />
-            </Button>
-            <Button
-                variant="contained"
-                onClick={stopStreaming}
-                sx={{
-                    bgcolor: mode === "dark" ? "#cccccc" : "secondary.main",
-                    color: mode === "dark" ? "text.primary" : "secondary.contrastText",
-                    "&:hover": { bgcolor: mode === "dark" ? "#bbbbbb" : "secondary.dark" },
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    padding: "8px",
-                    minWidth: "48px",
-                }}
-                aria-label="Stop streaming"
-            >
-                <StopIcon />
-            </Button>
+                <Button
+                    variant="contained"
+                    onClick={sendMessage}
+                    sx={buttonStyle}
+                    aria-label="Send message"
+                >
+                    <SendIcon />
+                </Button>
+                <Button
+                    variant="contained"
+                    onClick={stopStreaming}
+                    sx={buttonStyle}
+                    aria-label="Stop streaming"
+                >
+                    <StopIcon />
+                </Button>
+            </Box>
         </Box>
     );
 };

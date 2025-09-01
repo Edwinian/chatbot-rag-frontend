@@ -12,10 +12,11 @@ import {
   PageProps,
   ApplicationLog,
 } from "../../types";
-import { deleteApplicationLogs, fetchApplicationLogs } from "../../api";
+import { fetchApplicationLogs } from "../../api";
 import NewChatButton from "./NewChatButton";
 import ChatScreen from "./ChatScreen";
 import ChatBar from "./ChatBar";
+import ChatSideBar from "./ChatSideBar";
 
 const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -32,10 +33,6 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
   }, [messages]);
 
   const startNewSession = useCallback(() => {
-    if (sessionId) {
-      deleteApplicationLogs({ session_id: sessionId });
-    }
-
     const newSessionId = uuidv4();
     setSearchParams({ sessionId: newSessionId });
     setMessages([]);
@@ -304,43 +301,51 @@ const ChatWindow: React.FC<PageProps> = ({ selectedCollection, mode }) => {
     <Box
       sx={{
         display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
         minHeight: "100vh",
-        px: { xs: 1, sm: 2, md: 3 },
         bgcolor: mode === "dark" ? "background.default" : "background.paper",
       }}
     >
-      <Paper
-        elevation={3}
+      <ChatSideBar mode={mode} />
+      <Box
         sx={{
-          p: { xs: 1, sm: 2 },
+          flexGrow: 1,
           display: "flex",
-          flexDirection: "column",
-          bgcolor: "background.paper",
-          width: { xs: "100%", sm: "90%", md: "80%", lg: "70%" },
-          maxWidth: "800px",
-          minHeight: "calc(100vh - 120px)",
-          position: "relative",
-          borderRadius: 2,
+          justifyContent: "center",
+          alignItems: "center",
+          px: { xs: 1, sm: 2, md: 3 },
         }}
       >
-        <NewChatButton startNewSession={startNewSession} mode={mode} />
-        <ChatScreen
-          messages={messages}
-          isLoading={isLoading}
-          messagesEndRef={messagesEndRef}
-          regenerate={sendMessage}
-          mode={mode}
-        />
-        <ChatBar
-          stopStreaming={stopStreaming}
-          sendMessage={sendMessage}
-          setInput={setInput}
-          input={input}
-          mode={mode}
-        />
-      </Paper>
+        <Paper
+          elevation={3}
+          sx={{
+            p: { xs: 1, sm: 2 },
+            display: "flex",
+            flexDirection: "column",
+            bgcolor: "background.paper",
+            width: { xs: "100%", sm: "90%", md: "80%", lg: "100%" },
+            maxWidth: "800px",
+            minHeight: "calc(100vh - 120px)",
+            position: "relative",
+            borderRadius: 2,
+          }}
+        >
+          <NewChatButton startNewSession={startNewSession} mode={mode} />
+          <ChatScreen
+            messages={messages}
+            isLoading={isLoading}
+            messagesEndRef={messagesEndRef}
+            regenerate={sendMessage}
+            mode={mode}
+          />
+          <ChatBar
+            stopStreaming={stopStreaming}
+            sendMessage={sendMessage}
+            setInput={setInput}
+            input={input}
+            mode={mode}
+          />
+        </Paper>
+      </Box>
     </Box>
   );
 };

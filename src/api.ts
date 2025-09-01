@@ -66,3 +66,9 @@ export const deleteApplicationLogs = async (queryParams: Partial<ApplicationLogQ
     const response = await api.post(url);
     return response.data;
 };
+
+export const fetchLatestApplicationLogs = async (): Promise<ApplicationLog[]> => {
+    const url = '/get-latest-application-logs'
+    const response = await api.get(url);
+    return response.data;
+};
